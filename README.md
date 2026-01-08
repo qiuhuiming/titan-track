@@ -1,6 +1,6 @@
-# Tauri v2 iOS App Template
+# Tauri v2 App Template
 
-A starter template for building iOS apps with Tauri v2, React, and Tailwind CSS.
+A starter template for building apps with Tauri v2, React, and Tailwind CSS.
 
 ## Tech Stack
 
@@ -11,27 +11,8 @@ A starter template for building iOS apps with Tauri v2, React, and Tailwind CSS.
 
 ## Prerequisites
 
-### Required for Desktop Development
-
 - [Rust](https://rustup.rs/) (via rustup)
 - [Bun](https://bun.sh/)
-
-### Required for iOS Development
-
-- macOS
-- [Xcode](https://apps.apple.com/app/xcode/id497799835) (from Mac App Store)
-- Cocoapods:
-  ```bash
-  brew install cocoapods
-  ```
-- iOS Rust targets:
-  ```bash
-  rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
-  ```
-- Switch to full Xcode (after installation):
-  ```bash
-  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-  ```
 
 ## Getting Started
 
@@ -40,16 +21,43 @@ A starter template for building iOS apps with Tauri v2, React, and Tailwind CSS.
    bun install
    ```
 
-2. **Run on desktop:**
+2. **Run development server:**
    ```bash
    bun run tauri dev
    ```
 
-3. **Run on iOS** (after installing iOS prerequisites):
-   ```bash
-   bun run tauri ios init
-   bun run tauri ios dev
-   ```
+## Platform-Specific Setup
+
+### iOS
+
+Requires macOS with the following:
+
+- [Xcode](https://apps.apple.com/app/xcode/id497799835) (from Mac App Store)
+- Cocoapods: `brew install cocoapods`
+- iOS Rust targets:
+  ```bash
+  rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+  ```
+- Switch to full Xcode:
+  ```bash
+  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+  ```
+
+Run on iOS:
+```bash
+bun run tauri ios init
+bun run tauri ios dev
+```
+
+### Android
+
+See [Tauri Android Prerequisites](https://v2.tauri.app/start/prerequisites/#android) for setup instructions.
+
+Run on Android:
+```bash
+bun run tauri android init
+bun run tauri android dev
+```
 
 ## Project Structure
 
