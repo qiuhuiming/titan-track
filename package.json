@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "ios:init": "tauri ios init && ./scripts/fix-xcode-version.sh",
+    "ios:dev": "./scripts/fix-xcode-version.sh && tauri ios dev"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
