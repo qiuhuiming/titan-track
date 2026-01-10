@@ -137,13 +137,13 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
       {!isAdding ? (
         <div className="flex flex-col space-y-6">
           {/* Upcoming Mission Card */}
-          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-200 overflow-hidden relative group">
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 md:p-8 text-white shadow-2xl shadow-slate-200 overflow-hidden relative group">
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-               <Calendar size={120} />
+               <Calendar size={100} />
             </div>
             
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-4 md:mb-6">
                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Next Mission</span>
               </div>
@@ -151,7 +151,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
               {upcomingPlan ? (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-3xl font-black italic uppercase tracking-tight leading-none mb-2">{upcomingPlan.title}</h3>
+                    <h3 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tight leading-tight mb-2">{upcomingPlan.title}</h3>
                     <div className="flex items-center gap-4 text-slate-400">
                        <div className="flex items-center gap-1">
                          <Clock size={14} />
@@ -195,28 +195,30 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
             </div>
           </div>
 
-          <div className="px-2">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t.past_records}</h4>
+          <div>
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.past_records}</h4>
               <ArrowRight size={16} className="text-slate-300" />
             </div>
             <div className="space-y-3">
               {[...logs].reverse().slice(0, 10).map(log => {
                 const ex = exercises.find(e => e.id === log.exerciseId);
                 return (
-                  <div key={log.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between hover:border-indigo-100 transition-colors">
-                    <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                  <div key={log.id} className="bg-white p-4 md:p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between hover:border-indigo-100 transition-colors">
+                    <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                       <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0">
                          <CheckCircle size={20} />
                        </div>
-                       <div>
-                        <p className="font-black text-slate-900 leading-tight">{ex?.name || '???'}</p>
-                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5">{log.date}</p>
-                      </div>
+                       <div className="min-w-0">
+                         <p className="font-black text-slate-900 leading-tight truncate">{ex?.name || '???'}</p>
+                         <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5">{log.date}</p>
+                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-slate-900">{log.sets.length} {t.log.toUpperCase()}S</p>
-                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">{log.workoutType}</p>
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <p className="text-xs md:text-sm font-black text-slate-900 uppercase">
+                        {log.sets.length} {language === 'en' ? (log.sets.length > 1 ? 'Sets' : 'Set') : '组'}
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter truncate max-w-[100px]">{log.workoutType}</p>
                     </div>
                   </div>
                 );
