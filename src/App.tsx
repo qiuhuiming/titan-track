@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TabType, Exercise, WorkoutEntry, Language, WorkoutPlan, NavigationParams } from './types';
-import { storageService } from './services/storageService';
+import { tauriStorageService } from './services/tauriStorageService';
 import { translations } from './translations';
 import Dashboard from './components/Dashboard';
 import WorkoutLog from './components/WorkoutLog';
@@ -14,7 +14,8 @@ import {
   Sparkles, 
   PlusCircle, 
   Settings,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -24,11 +25,29 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<WorkoutEntry[]>([]);
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
   const [language, setLanguage] = useState<Language>('zh');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setExercises(storageService.getExercises());
-    setLogs(storageService.getLogs());
-    setPlans(storageService.getPlans());
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [loadedExercises, loadedLogs, loadedPlans] = await Promise.all([
+          tauriStorageService.getExercises(),
+          tauriStorageService.getLogs(),
+          tauriStorageService.getPlans(),
+        ]);
+        setExercises(loadedExercises);
+        setLogs(loadedLogs);
+        setPlans(loadedPlans);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+
     const savedLang = localStorage.getItem('titan_track_lang') as Language;
     if (savedLang) setLanguage(savedLang);
   }, []);
@@ -41,14 +60,22 @@ const App: React.FC = () => {
 
   const t = translations[language];
 
-  const handleUpdateLogs = (newLogs: WorkoutEntry[]) => {
+  const handleUpdateLogs = async (newLogs: WorkoutEntry[]) => {
     setLogs(newLogs);
-    storageService.saveLogs(newLogs);
+    try {
+      await tauriStorageService.saveLogs(newLogs);
+    } catch (error) {
+      console.error('Failed to save logs:', error);
+    }
   };
 
-  const handleUpdatePlans = (newPlans: WorkoutPlan[]) => {
+  const handleUpdatePlans = async (newPlans: WorkoutPlan[]) => {
     setPlans(newPlans);
-    storageService.savePlans(newPlans);
+    try {
+      await tauriStorageService.savePlans(newPlans);
+    } catch (error) {
+      console.error('Failed to save plans:', error);
+    }
   };
 
   const navigateToTab = (tab: TabType, params: NavigationParams | null = null) => {
@@ -62,6 +89,17 @@ const App: React.FC = () => {
     { id: TabType.PLAN, label: t.plan, icon: CalendarDays },
     { id: TabType.AI_COACH, label: t.ai_coach, icon: Sparkles },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white md:bg-slate-50 flex flex-col md:flex-row pb-[calc(70px+env(safe-area-inset-bottom))] md:pb-0">

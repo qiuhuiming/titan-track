@@ -12,13 +12,24 @@ interface PlanManagerProps {
   initialParams?: NavigationParams | null;
 }
 
+type PlanSetGroup = WorkoutSet & { count?: number };
+
+type PlanFormExercise = {
+  exerciseId: string;
+  sets: PlanSetGroup[];
+};
+
+type PlanFormState = Partial<WorkoutPlan> & {
+  exercises?: PlanFormExercise[];
+};
+
 const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePlans, language, initialParams }) => {
   const t = translations[language];
   const [isAdding, setIsAdding] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   
-  const [newPlan, setNewPlan] = useState<Partial<WorkoutPlan>>({
+  const [newPlan, setNewPlan] = useState<PlanFormState>({
     date: new Date().toISOString().split('T')[0],
     title: '',
     tags: [],
@@ -40,6 +51,36 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
     }
   }, [initialParams, plans]);
 
+  const isSameSetGroup = (a: WorkoutSet, b: WorkoutSet) => (
+    a.weight === b.weight &&
+    a.reps === b.reps &&
+    a.timeMinutes === b.timeMinutes &&
+    a.distance === b.distance &&
+    a.rpe === b.rpe
+  );
+
+  const groupSets = (sets: WorkoutSet[]): PlanSetGroup[] => (
+    sets.reduce<PlanSetGroup[]>((acc, set) => {
+      const last = acc[acc.length - 1];
+      if (last && isSameSetGroup(last, set)) {
+        last.count = (last.count ?? 1) + 1;
+        return acc;
+      }
+      acc.push({ ...set, count: 1 });
+      return acc;
+    }, [])
+  );
+
+  const expandSetGroups = (groups: PlanSetGroup[]): WorkoutSet[] => (
+    groups.flatMap(group => {
+      const { count = 1, ...set } = group;
+      return Array.from({ length: Math.max(1, count) }, () => ({
+        ...set,
+        id: Math.random().toString(36).substr(2, 9)
+      }));
+    })
+  );
+
   const handleStartAdd = () => {
     setEditingPlanId(null);
     setNewPlan({
@@ -57,22 +98,36 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
       date: plan.date,
       title: plan.title,
       tags: plan.tags,
-      exercises: JSON.parse(JSON.stringify(plan.exercises)) // Deep copy
+      exercises: plan.exercises.map(exercise => ({
+        exerciseId: exercise.exerciseId,
+        sets: groupSets(exercise.sets)
+      }))
     });
     setIsAdding(true);
-    setExpandedPlanId(null); // Close the expansion when editing
+    setExpandedPlanId(null);
   };
 
   const handleSavePlan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPlan.title || newPlan.exercises?.length === 0) return;
     
+    const expandedExercises = (newPlan.exercises || []).map(exercise => ({
+      exerciseId: exercise.exerciseId,
+      sets: expandSetGroups(exercise.sets)
+    }));
+
     if (editingPlanId) {
-      const updatedPlans = plans.map(p => 
-        p.id === editingPlanId 
-          ? { ...p, ...newPlan as WorkoutPlan } 
+      const updatedPlans = plans.map(p => (
+        p.id === editingPlanId
+          ? {
+              ...p,
+              date: newPlan.date!,
+              title: newPlan.title!,
+              tags: newPlan.tags || [],
+              exercises: expandedExercises
+            }
           : p
-      );
+      ));
       onUpdatePlans(updatedPlans);
     } else {
       const plan: WorkoutPlan = {
@@ -80,7 +135,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
         date: newPlan.date!,
         title: newPlan.title!,
         tags: newPlan.tags || [],
-        exercises: newPlan.exercises || [],
+        exercises: expandedExercises,
         isCompleted: false
       };
       onUpdatePlans([...plans, plan]);
@@ -96,7 +151,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
       ...newPlan,
       exercises: [
         ...(newPlan.exercises || []),
-        { exerciseId: exercises[0]?.id || '', sets: [{ id: Math.random().toString(), weight: 0, reps: 0 }] }
+        { exerciseId: exercises[0]?.id || '', sets: [{ id: Math.random().toString(), weight: 0, reps: 0, count: 1 }] }
       ]
     });
   };
@@ -165,8 +220,8 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
                 <button type="button" onClick={addExerciseToPlan} className="text-[10px] font-black text-indigo-600">+ {t.exercise.toUpperCase()}</button>
               </div>
               
-              {newPlan.exercises?.map((item, idx) => (
-                <div key={idx} className="bg-slate-50 p-4 rounded-2xl space-y-3 relative group">
+              {newPlan.exercises?.map((item: PlanFormExercise, idx) => (
+                <div key={`exercise-${idx}`} className="bg-slate-50 p-4 rounded-2xl space-y-3 relative group">
                   <button 
                     type="button" 
                     onClick={() => removeExerciseFromPlan(idx)}
@@ -185,14 +240,86 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
                   >
                     {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
                   </select>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => {
-                       const updated = [...(newPlan.exercises || [])];
-                       updated[idx].sets.push({ id: Math.random().toString(), weight: 0, reps: 0 });
-                       setNewPlan({...newPlan, exercises: updated});
-                    }} className="text-[9px] font-black text-slate-400 uppercase">+ Set</button>
-                    <div className="flex-1 text-right text-[10px] font-bold text-slate-400">
-                      {item.sets.length} Sets
+                  
+                  <div className="space-y-2">
+                    {item.sets.map((group: PlanSetGroup, groupIdx) => (
+                      <div key={group.id} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+                        <div className="flex-1 flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={group.weight || 0}
+                            onChange={e => {
+                              const updated = [...(newPlan.exercises || [])];
+                              updated[idx].sets[groupIdx] = { ...group, weight: parseFloat(e.target.value) || 0 };
+                              setNewPlan({...newPlan, exercises: updated});
+                            }}
+                            className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+                            placeholder="0"
+                          />
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">kg</span>
+                        </div>
+                        
+                        <div className="flex-1 flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={group.reps || 0}
+                            onChange={e => {
+                              const updated = [...(newPlan.exercises || [])];
+                              updated[idx].sets[groupIdx] = { ...group, reps: parseInt(e.target.value) || 0 };
+                              setNewPlan({...newPlan, exercises: updated});
+                            }}
+                            className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+                            placeholder="0"
+                          />
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">reps</span>
+                        </div>
+
+                        <div className="w-16 flex items-center gap-1 bg-indigo-50/50 rounded-lg px-2 py-1.5 border border-indigo-100">
+                          <span className="text-[10px] font-black text-indigo-400 italic">×</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={group.count ?? 1}
+                            onChange={e => {
+                              const nextCount = Math.max(1, parseInt(e.target.value) || 1);
+                              const updated = [...(newPlan.exercises || [])];
+                              updated[idx].sets[groupIdx] = { ...group, count: nextCount };
+                              setNewPlan({...newPlan, exercises: updated});
+                            }}
+                            className="w-full text-center text-sm font-black text-indigo-600 bg-transparent border-none p-0 focus:ring-0"
+                            placeholder="1"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...(newPlan.exercises || [])];
+                            updated[idx].sets = updated[idx].sets.filter((_, i) => i !== groupIdx);
+                            setNewPlan({...newPlan, exercises: updated});
+                          }}
+                          className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const updated = [...(newPlan.exercises || [])];
+                        updated[idx].sets.push({ id: Math.random().toString(), weight: 0, reps: 0, count: 1 });
+                        setNewPlan({...newPlan, exercises: updated});
+                      }} 
+                      className="text-[10px] font-black text-indigo-600 uppercase italic tracking-widest bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 active:scale-95 transition-all shadow-sm"
+                    >
+                      + Add Group
+                    </button>
+                    <div className="flex-1 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest self-center">
+                      Total: {item.sets.reduce((acc, set) => acc + (set.count ?? 1), 0)} Sets
                     </div>
                   </div>
                 </div>
