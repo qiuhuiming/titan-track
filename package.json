@@ -1,7 +1,7 @@
 {
-  "name": "tauri-demo",
+  "name": "titan-track",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,8 +14,11 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
+    "@google/genai": "^1.35.0",
+    "lucide-react": "^0.562.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

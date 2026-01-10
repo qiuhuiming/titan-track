@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "tauri-demo",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "productName": "TitanTrack",
+  "version": "1.0.0",
+  "identifier": "com.titantrack.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "Tauri Demo",
-        "width": 800,
-        "height": 600,
+        "title": "TitanTrack AI Training Hub",
+        "width": 390,
+        "height": 844,
         "resizable": true,
         "fullscreen": false
       }
