@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { WorkoutPlan, Exercise, MuscleGroup, Language, WorkoutSet } from '../types';
+import React, { useState, useEffect } from 'react';
+import { WorkoutPlan, Exercise, MuscleGroup, Language, WorkoutSet, NavigationParams } from '../types';
 import { translations } from '../translations';
 import { Plus, ChevronDown, ChevronUp, Trash2, Calendar, Edit2, X } from 'lucide-react';
 
@@ -9,9 +9,10 @@ interface PlanManagerProps {
   exercises: Exercise[];
   onUpdatePlans: (plans: WorkoutPlan[]) => void;
   language: Language;
+  initialParams?: NavigationParams | null;
 }
 
-const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePlans, language }) => {
+const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePlans, language, initialParams }) => {
   const t = translations[language];
   const [isAdding, setIsAdding] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -23,6 +24,21 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
     tags: [],
     exercises: []
   });
+
+  useEffect(() => {
+    if (initialParams?.date) {
+      const planToExpand = plans.find(p => p.date === initialParams.date);
+      if (planToExpand) {
+        setExpandedPlanId(planToExpand.id);
+        setTimeout(() => {
+          const element = document.getElementById(`plan-${planToExpand.id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    }
+  }, [initialParams, plans]);
 
   const handleStartAdd = () => {
     setEditingPlanId(null);
@@ -200,7 +216,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
             </div>
           ) : (
             [...plans].sort((a, b) => b.date.localeCompare(a.date)).map(plan => (
-              <div key={plan.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all">
+              <div key={plan.id} id={`plan-${plan.id}`} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all">
                 <div 
                   className="p-5 flex items-center justify-between cursor-pointer active:bg-slate-50"
                   onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}

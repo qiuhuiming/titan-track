@@ -16,6 +16,7 @@ export const translations = {
     recent_logs: "最近记录",
     history: "历史记录",
     training_calendar: "训练日历",
+    go_to_plan: "查看计划",
     // Workout Log
     record_progress: "记录进度",
     consistency_quote: "坚持是目标与成就之间的桥梁。",
@@ -107,6 +108,7 @@ export const translations = {
     recent_logs: "Recent Logs",
     history: "History",
     training_calendar: "Training Calendar",
+    go_to_plan: "Go to Plan",
     // Workout Log
     record_progress: "Record Progress",
     consistency_quote: "Consistency is the bridge between goals and accomplishment.",

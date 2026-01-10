@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { TabType, Exercise, WorkoutEntry, Language, WorkoutPlan } from './types';
+import { TabType, Exercise, WorkoutEntry, Language, WorkoutPlan, NavigationParams } from './types';
 import { storageService } from './services/storageService';
 import { translations } from './translations';
 import Dashboard from './components/Dashboard';
@@ -19,6 +19,7 @@ import {
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>(TabType.DASHBOARD);
+  const [activeTabParams, setActiveTabParams] = useState<NavigationParams | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [logs, setLogs] = useState<WorkoutEntry[]>([]);
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
@@ -50,6 +51,11 @@ const App: React.FC = () => {
     storageService.savePlans(newPlans);
   };
 
+  const navigateToTab = (tab: TabType, params: NavigationParams | null = null) => {
+    setActiveTab(tab);
+    setActiveTabParams(params);
+  };
+
   const tabs = [
     { id: TabType.DASHBOARD, label: t.home, icon: LayoutDashboard },
     { id: TabType.WORKOUT_LOG, label: t.log, icon: PlusCircle },
@@ -70,7 +76,8 @@ const App: React.FC = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              type="button"
+              onClick={() => navigateToTab(tab.id)}
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 w-full ${
                 activeTab === tab.id 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
@@ -84,6 +91,7 @@ const App: React.FC = () => {
         </nav>
 
         <button 
+          type="button"
           onClick={handleLanguageToggle}
           className="mt-auto flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
         >
@@ -92,24 +100,38 @@ const App: React.FC = () => {
         </button>
       </aside>
 
-      <header className="md:hidden pt-safe sticky top-0 bg-white/80 backdrop-blur-md z-40 px-6 py-4 flex items-center justify-between border-b border-slate-100">
+      <header className="md:hidden pt-safe sticky top-0 bg-white/80 backdrop-blur-xl z-40 px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm shadow-slate-200/20">
         <div className="flex items-center space-x-2">
-          <Activity className="text-indigo-600" size={24} />
-          <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase italic">Titan<span className="text-indigo-600">Track</span></span>
+          <div className="p-1.5 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-100">
+            <Activity className="text-white" size={20} />
+          </div>
+          <span className="text-xl font-black tracking-tighter text-slate-900 uppercase italic">Titan<span className="text-indigo-600">Track</span></span>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleLanguageToggle} className="p-2 text-indigo-600 bg-indigo-50 rounded-lg text-xs font-black uppercase tracking-tight">
-            {language === 'zh' ? 'EN' : '中'}
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            onClick={handleLanguageToggle} 
+            className="px-3 py-1.5 text-indigo-600 bg-indigo-50 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 active:scale-95 transition-transform"
+          >
+            {language === 'zh' ? 'EN' : '中文'}
           </button>
-          <button className="p-2 text-slate-400">
-            <Settings size={20} />
+          <button type="button" className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+            <Settings size={22} />
           </button>
         </div>
       </header>
 
       <main className="flex-grow p-4 md:p-8 lg:p-12">
         <div className="max-w-5xl mx-auto h-full">
-          {activeTab === TabType.DASHBOARD && <Dashboard logs={logs} exercises={exercises} plans={plans} language={language} />}
+          {activeTab === TabType.DASHBOARD && (
+            <Dashboard 
+              logs={logs} 
+              exercises={exercises} 
+              plans={plans} 
+              language={language} 
+              onNavigate={navigateToTab}
+            />
+          )}
           {activeTab === TabType.WORKOUT_LOG && (
             <WorkoutLog 
               logs={logs} 
@@ -126,6 +148,7 @@ const App: React.FC = () => {
               exercises={exercises} 
               onUpdatePlans={handleUpdatePlans} 
               language={language} 
+              initialParams={activeTabParams}
             />
           )}
           {activeTab === TabType.AI_COACH && <AICoach logs={logs} exercises={exercises} language={language} />}
@@ -136,7 +159,8 @@ const App: React.FC = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            type="button"
+            onClick={() => navigateToTab(tab.id)}
             className={`flex flex-col items-center space-y-1 relative transition-colors duration-300 ${
               activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400'
             }`}

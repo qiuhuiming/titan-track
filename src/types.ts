@@ -52,3 +52,8 @@ export const TabType = {
 } as const;
 
 export type TabType = typeof TabType[keyof typeof TabType];
+
+export interface NavigationParams {
+  date?: string;
+  [key: string]: any;
+}
