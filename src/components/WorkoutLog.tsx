@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { WorkoutEntry, Exercise, WorkoutSet, Language, WorkoutPlan } from '../types';
 import { translations } from '../translations';
 import { Plus, Trash2, ClipboardList, X, CheckCircle, Calendar, ArrowRight, Play, Clock, Check, SkipForward } from 'lucide-react';
@@ -226,7 +227,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
             </div>
           </div>
         </div>
-      ) : (
+      ) : createPortal(
         <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
           <div className="pt-safe px-6 py-4 flex items-center justify-between border-b border-slate-100">
             <button onClick={() => setIsAdding(false)} className="p-2 text-slate-400 bg-slate-50 rounded-xl">
@@ -435,7 +436,8 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                {activePlan ? t.complete_plan : t.save_workout}
              </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
