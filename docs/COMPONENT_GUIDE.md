@@ -205,9 +205,11 @@ export default Component;
 - **Large (>400 lines):** High complexity, should be decomposed
 
 Current Large Components:
-- WorkoutLog.tsx (446 lines) - Consider splitting
-- Dashboard.tsx (373 lines) - Consider splitting
-- PlanManager.tsx (417 lines) - Consider splitting
+- PlanManager.tsx (790 lines) - Consider splitting
+- WorkoutLog.tsx (710 lines) - Consider splitting
+- Dashboard.tsx (492 lines) - Consider splitting
+- App.tsx (394 lines) - Consider splitting
+- ExerciseManager.tsx (251 lines) - Medium complexity
 
 ## Icons (lucide-react)
 ```tsx

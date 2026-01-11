@@ -2,7 +2,7 @@
 
 ## Global State (App.tsx)
 ```typescript
-// Location: src/App.tsx, lines 22-28
+// Location: src/App.tsx, lines 33-42
 const [activeTab, setActiveTab] = useState<TabType>(TabType.DASHBOARD);
 const [activeTabParams, setActiveTabParams] = useState<NavigationParams | null>(null);
 const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -10,6 +10,8 @@ const [logs, setLogs] = useState<WorkoutEntry[]>([]);
 const [plans, setPlans] = useState<WorkoutPlan[]>([]);
 const [language, setLanguage] = useState<Language>('zh');
 const [isLoading, setIsLoading] = useState(true);
+const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false);
 ```
 
 ## State Update Pattern
@@ -25,7 +27,7 @@ const handleAddLog = (newLog: WorkoutEntry) => {
 
 ### Parent Updates State + Persists
 ```typescript
-// Location: src/App.tsx, lines 63-79
+// Location: src/App.tsx
 const handleUpdateLogs = async (newLogs: WorkoutEntry[]) => {
   setLogs(newLogs);  // React state update
   try {
@@ -58,32 +60,37 @@ Use when:
 
 ## State Initialization Flow
 ```typescript
-// Location: src/App.tsx, lines 30-53
+// Location: src/App.tsx, lines 44-67
 useEffect(() => {
   const loadData = async () => {
-    setIsLoading(true);
-    const [loadedExercises, loadedLogs, loadedPlans] = await Promise.all([
-      tauriStorageService.getExercises(),
-      tauriStorageService.getLogs(),
-      tauriStorageService.getPlans(),
-    ]);
-    setExercises(loadedExercises);
-    setLogs(loadedLogs);
-    setPlans(loadedPlans);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      const [loadedExercises, loadedLogs, loadedPlans] = await Promise.all([
+        tauriStorageService.getExercises(),
+        tauriStorageService.getLogs(),
+        tauriStorageService.getPlans(),
+      ]);
+      setExercises(loadedExercises);
+      setLogs(loadedLogs);
+      setPlans(loadedPlans);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  loadData();
-  
+
+  void loadData();
+
   // Load language preference from localStorage
-  const savedLang = localStorage.getItem('titan_track_lang') as Language;
-  if (savedLang) setLanguage(savedLang);
+  const savedLang = localStorage.getItem('titan_track_lang');
+  if (savedLang === 'zh' || savedLang === 'en') setLanguage(savedLang);
 }, []);
 ```
 
 ## Language State Management
 ```typescript
-// Toggle handler (lines 55-59)
+// Toggle handler in App.tsx
 const handleLanguageToggle = () => {
   const nextLang = language === 'zh' ? 'en' : 'zh';
   setLanguage(nextLang);
@@ -92,6 +99,16 @@ const handleLanguageToggle = () => {
 
 // Usage in components
 const t = translations[language];
+```
+
+## Settings & Modal State
+```typescript
+// Settings menu state
+const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false);
+
+// ESC key and click-outside handlers are set up via useEffect
+// Body scroll is disabled when modals are open
 ```
 
 ## Anti-Patterns to Avoid
@@ -148,7 +165,6 @@ onUpdateLogs(updatedLogs);
 
 ### Global Loading (App.tsx)
 ```typescript
-// Lines 93-102
 if (isLoading) {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center">
@@ -165,7 +181,7 @@ if (isLoading) {
 
 ### Component-Specific Loading
 ```typescript
-// Example: AICoach.tsx, lines 17, 55, 78
+// Example: AICoach.tsx
 const [loading, setLoading] = useState(false);
 
 <button onClick={handleAnalysis} disabled={loading}>

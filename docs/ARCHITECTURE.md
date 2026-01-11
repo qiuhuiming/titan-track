@@ -9,12 +9,12 @@
 
 ## Component Tree
 ```
-App.tsx (Root - 222 lines)
-├── Dashboard.tsx (373 lines) - Calendar view + preview
-├── WorkoutLog.tsx (446 lines) - Workout logging + execution
-├── PlanManager.tsx (417 lines) - Plan CRUD + grouping
-├── AICoach.tsx (114 lines) - AI interface
-└── ExerciseManager.tsx (182 lines) - Exercise catalog
+App.tsx (Root - 394 lines)
+├── Dashboard.tsx (492 lines) - Calendar view + preview
+├── WorkoutLog.tsx (710 lines) - Workout logging + execution
+├── PlanManager.tsx (790 lines) - Plan CRUD + grouping
+├── AICoach.tsx (138 lines) - AI interface
+└── ExerciseManager.tsx (251 lines) - Exercise catalog (modal)
 ```
 
 ## Data Flow Architecture
@@ -63,9 +63,10 @@ File System (AppDataDir/exercises.json, logs.json, plans.json)
 - **Responsive:** Tailwind breakpoints (sm:, md:, lg:)
 
 ## Navigation Pattern
-- **Mobile:** Bottom tab bar with 4 tabs (Home, Log, Plan, AI Coach)
+- **Mobile:** Bottom tab bar with 4 tabs (Home, Log, Plan, AI Coach) + Settings menu
 - **Desktop:** Sidebar navigation with same 4 tabs
 - **State Management:** activeTab state + activeTabParams for navigation with data
+- **Settings Menu:** Dropdown menu with language toggle, exercise manager, and data reset options
 
 ## Internationalization
 - **Languages:** Chinese (zh) and English (en)

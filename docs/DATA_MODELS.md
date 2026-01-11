@@ -38,6 +38,7 @@ interface WorkoutPlan {
     sets: WorkoutSet[];
   }[];
   isCompleted?: boolean;
+  createdAt?: string;  // ISO format timestamp
 }
 ```
 
@@ -87,7 +88,7 @@ const TabType = {
 ```typescript
 interface NavigationParams {
   date?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 ```
 
@@ -147,19 +148,17 @@ const expandSetGroups = (groups: PlanSetGroup[]): WorkoutSet[] => {
 ## Initial Data
 
 ### INITIAL_EXERCISES
-- Location: src/constants.ts, lines 4-25
-- Count: 14 exercises
-- Categories: Chest (2), Legs (3), Back (3), Shoulders (2), Arms (2), Cardio (1), Core (1)
+- Location: src/constants.ts, lines 3-14
+- Count: 10 exercises (Chinese names)
+- Categories: Legs (2), Back (3), Chest (2), Shoulders (1), Arms (1), Core (1)
 
 ### INITIAL_PLANS
-- Location: src/constants.ts, lines 27-90
-- Count: 5 plans
-- Dates: Jan 01, Jan 03, Jan 05, Jan 08, Jan 10, 2026
+- Location: src/constants.ts, line 15
+- Count: 0 (empty array - user creates plans from scratch)
 
 ### INITIAL_LOGS
-- Location: src/constants.ts, lines 92-134
-- Count: 5 workout entries
-- Linked to plans: 3 entries have planId
+- Location: src/constants.ts, line 16
+- Count: 0 (empty array - user logs workouts from scratch)
 
 ## ID Generation Pattern
 ```typescript

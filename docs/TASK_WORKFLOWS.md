@@ -19,7 +19,7 @@
 3. Implement with useState for local state
 4. Add callback props if parent state updates needed
 5. Follow styling patterns from UI_PATTERNS.md
-6. Test with: `npm run tauri dev`
+6. Test with: `bun run tauri dev`
 
 ### Step 4: Update Parent Component (if needed)
 1. Import new component in parent
@@ -87,7 +87,7 @@
 3. Test refactored functionality
 
 ### Step 5: Verify
-1. Run: `npm run lint` to check for issues
+1. Run: `bun run lint` to check for issues
 2. Test all refactored features
 3. Check React DevTools for state consistency
 
@@ -119,8 +119,8 @@
 3. Add error handling and fallback logic
 
 ### Step 6: Test
-1. Build: `npm run build`
-2. Run: `npm run tauri dev`
+1. Build: `bun run build`
+2. Run: `bun run tauri dev`
 3. Test data persistence
 
 ## Adding UI Feature
@@ -166,13 +166,19 @@
 
 ### Run Linter
 ```bash
-npm run lint
+bun run lint
 ```
 
 ### Run Type Checker
 ```bash
-npm run build
+bun run typecheck
 # TypeScript errors will appear in output
+```
+
+### Run Full Static Check
+```bash
+bun run check
+# Runs typecheck + lint + format check
 ```
 
 ### Tauri Developer Tools
@@ -184,20 +190,30 @@ npm run build
 
 ### Development
 ```bash
-npm run dev          # Start Vite dev server
-npm run tauri dev   # Run full Tauri app
+bun run dev          # Start Vite dev server
+bun run tauri dev    # Run full Tauri app
 ```
 
 ### Building
 ```bash
-npm run build        # Build frontend + Tauri
-npm run preview      # Preview production build
+bun run build        # Build frontend + Tauri
+bun run preview      # Preview production build
+```
+
+### Code Quality
+```bash
+bun run lint         # Run ESLint
+bun run lint:fix     # Run ESLint with auto-fix
+bun run typecheck    # Run TypeScript type checker
+bun run format       # Format code with Prettier
+bun run format:check # Check code formatting
+bun run check        # Run all checks (typecheck + lint + format)
 ```
 
 ### iOS Development
 ```bash
-npm run ios:init    # Initialize iOS platform
-npm run ios:dev     # Run iOS dev build
+bun run ios:init    # Initialize iOS platform
+bun run ios:dev     # Run iOS dev build
 ```
 
 ## Git Workflow
@@ -206,8 +222,10 @@ npm run ios:dev     # Run iOS dev build
 ```bash
 git add .
 git commit -m "feature: add new feature description"
-npm run build      # Verify build before commit
+bun run check      # Verify checks before push
 ```
+
+Note: Pre-commit hooks are configured to run linting and type checking automatically.
 
 ## Context Window Considerations
 
