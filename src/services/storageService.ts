@@ -1,6 +1,5 @@
-
-import { Exercise, WorkoutEntry, WorkoutPlan } from '../types';
-import { INITIAL_EXERCISES, INITIAL_LOGS, INITIAL_PLANS } from '../constants';
+import { INITIAL_EXERCISES } from '../constants';
+import type { Exercise, WorkoutEntry, WorkoutPlan } from '../types';
 
 const STORAGE_KEYS = {
   EXERCISES: 'titan_track_exercises',
@@ -11,21 +10,23 @@ const STORAGE_KEYS = {
 export const storageService = {
   getExercises: (): Exercise[] => {
     const data = localStorage.getItem(STORAGE_KEYS.EXERCISES);
-    return data ? JSON.parse(data) : INITIAL_EXERCISES;
+    if (data) return JSON.parse(data);
+    localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(INITIAL_EXERCISES));
+    return INITIAL_EXERCISES;
   },
   saveExercises: (exercises: Exercise[]) => {
     localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(exercises));
   },
   getLogs: (): WorkoutEntry[] => {
     const data = localStorage.getItem(STORAGE_KEYS.LOGS);
-    return data ? JSON.parse(data) : INITIAL_LOGS;
+    return data ? JSON.parse(data) : [];
   },
   saveLogs: (logs: WorkoutEntry[]) => {
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs));
   },
   getPlans: (): WorkoutPlan[] => {
     const data = localStorage.getItem(STORAGE_KEYS.PLANS);
-    return data ? JSON.parse(data) : INITIAL_PLANS;
+    return data ? JSON.parse(data) : [];
   },
   savePlans: (plans: WorkoutPlan[]) => {
     localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(plans));

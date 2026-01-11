@@ -1,8 +1,8 @@
-
-import React, { useState } from 'react';
-import { Exercise, MuscleGroup, Language } from '../types';
+import { Edit2, Filter, Plus, Search, Trash2, Zap } from 'lucide-react';
+import type { ChangeEvent, FC, FormEvent } from 'react';
+import { useState } from 'react';
 import { translations } from '../translations';
-import { Plus, Search, Filter, Trash2, Edit2, Zap } from 'lucide-react';
+import type { Exercise, Language, MuscleGroup } from '../types';
 
 interface ExerciseManagerProps {
   exercises: Exercise[];
@@ -12,7 +12,7 @@ interface ExerciseManagerProps {
 
 const MUSCLE_GROUPS: MuscleGroup[] = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Full Body', 'Cardio'];
 
-const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateExercises, language }) => {
+const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercises, language }) => {
   const t = translations[language];
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<MuscleGroup | 'All'>('All');
@@ -24,13 +24,33 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
     notes: ''
   });
 
+  const handleFilterChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setFilterGroup(event.target.value as MuscleGroup | 'All');
+  };
+
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setNewExercise((prev) => ({ ...prev, name: event.target.value }));
+  };
+
+  const handleMuscleGroupChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setNewExercise((prev) => ({ ...prev, muscleGroup: event.target.value as MuscleGroup }));
+  };
+
+  const handleEquipmentChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setNewExercise((prev) => ({ ...prev, equipment: event.target.value }));
+  };
+
   const filteredExercises = exercises.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterGroup === 'All' || ex.muscleGroup === filterGroup;
     return matchesSearch && matchesFilter;
   });
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const ex: Exercise = {
       id: Math.random().toString(36).substr(2, 9),
@@ -55,11 +75,12 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
           <p className="text-slate-500 mt-1">{t.manage_arsenal}</p>
         </div>
         <button 
+          type="button"
           onClick={() => setIsAdding(!isAdding)}
           className="flex items-center justify-center space-x-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
         >
           <Plus size={20} />
-          <span>{t.new_exercise}</span>
+          <span>{isAdding ? t.cancel : t.new_exercise}</span>
         </button>
       </div>
 
@@ -70,7 +91,7 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
             type="text" 
             placeholder={t.search_exercises}
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white shadow-sm"
           />
         </div>
@@ -78,7 +99,7 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <select 
             value={filterGroup}
-            onChange={e => setFilterGroup(e.target.value as any)}
+            onChange={handleFilterChange}
             className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white shadow-sm appearance-none"
           >
             <option value="All">{t.all_muscle_groups}</option>
@@ -90,29 +111,31 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
       </div>
 
       {isAdding && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAdd} className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
+        <div className="rounded-[2rem] border border-slate-100 bg-slate-50/80 shadow-sm p-6 md:p-8 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          <form onSubmit={handleAdd} className="space-y-6">
             <h3 className="text-2xl font-bold text-slate-900">{t.add_new_exercise}</h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">{t.exercise_name}</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label htmlFor="exercise-name-input" className="block text-sm font-semibold text-slate-700 mb-1">{t.exercise_name}</label>
                 <input 
+                  id="exercise-name-input"
                   type="text" 
                   required
                   placeholder="e.g., Incline Dumbbell Press"
                   value={newExercise.name}
-                  onChange={e => setNewExercise({...newExercise, name: e.target.value})}
-                  className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  onChange={handleNameChange}
+                  className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">{t.muscle_group}</label>
+                <label htmlFor="muscle-group-select" className="block text-sm font-semibold text-slate-700 mb-1">{t.muscle_group}</label>
                 <select 
+                  id="muscle-group-select"
                   value={newExercise.muscleGroup}
-                  onChange={e => setNewExercise({...newExercise, muscleGroup: e.target.value as any})}
-                  className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  onChange={handleMuscleGroupChange}
+                  className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 >
                   {MUSCLE_GROUPS.map(mg => (
                     <option key={mg} value={mg}>{t.muscle_groups[mg]}</option>
@@ -121,18 +144,19 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">{t.equipment}</label>
+                <label htmlFor="equipment-input" className="block text-sm font-semibold text-slate-700 mb-1">{t.equipment}</label>
                 <input 
+                  id="equipment-input"
                   type="text" 
                   placeholder="e.g., Dumbbell, Cable, Barbell"
                   value={newExercise.equipment}
-                  onChange={e => setNewExercise({...newExercise, equipment: e.target.value})}
-                  className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  onChange={handleEquipmentChange}
+                  className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-3 pt-2">
               <button 
                 type="button" 
                 onClick={() => setIsAdding(false)}
@@ -159,8 +183,8 @@ const ExerciseManager: React.FC<ExerciseManagerProps> = ({ exercises, onUpdateEx
                 <Zap size={20} />
               </div>
               <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button className="p-2 text-slate-400 hover:text-indigo-600"><Edit2 size={16} /></button>
-                <button onClick={() => deleteExercise(ex.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={16} /></button>
+                <button type="button" className="p-2 text-slate-400 hover:text-indigo-600"><Edit2 size={16} /></button>
+                <button type="button" onClick={() => deleteExercise(ex.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={16} /></button>
               </div>
             </div>
             <h4 className="text-xl font-bold text-slate-900 mb-1">{ex.name}</h4>

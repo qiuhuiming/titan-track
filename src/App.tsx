@@ -1,24 +1,28 @@
-
-import React, { useState, useEffect } from 'react';
-import { TabType, Exercise, WorkoutEntry, Language, WorkoutPlan, NavigationParams } from './types';
+import {
+  Activity,
+  CalendarDays,
+  Dumbbell,
+  Globe,
+  LayoutDashboard,
+  Loader2,
+  PlusCircle,
+  Settings,
+  Sparkles,
+  X,
+} from 'lucide-react';
+import type { FC } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import AICoach from './components/AICoach';
+import Dashboard from './components/Dashboard';
+import ExerciseManager from './components/ExerciseManager';
+import PlanManager from './components/PlanManager';
+import WorkoutLog from './components/WorkoutLog';
+import { INITIAL_EXERCISES } from './constants';
 import { tauriStorageService } from './services/tauriStorageService';
 import { translations } from './translations';
-import Dashboard from './components/Dashboard';
-import WorkoutLog from './components/WorkoutLog';
-import PlanManager from './components/PlanManager';
-import AICoach from './components/AICoach';
-import { 
-  Activity, 
-  LayoutDashboard, 
-  CalendarDays, 
-  Sparkles, 
-  PlusCircle, 
-  Settings,
-  Globe,
-  Loader2
-} from 'lucide-react';
+import { type Exercise, type Language, type NavigationParams, TabType, type WorkoutEntry, type WorkoutPlan } from './types';
 
-const App: React.FC = () => {
+const App: FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>(TabType.DASHBOARD);
   const [activeTabParams, setActiveTabParams] = useState<NavigationParams | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -26,6 +30,9 @@ const App: React.FC = () => {
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
   const [language, setLanguage] = useState<Language>('zh');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -52,6 +59,46 @@ const App: React.FC = () => {
     if (savedLang) setLanguage(savedLang);
   }, []);
 
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsSettingsOpen(false);
+    };
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSettingsOpen]);
+
+  useEffect(() => {
+    if (!isExerciseManagerOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsExerciseManagerOpen(false);
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isExerciseManagerOpen]);
+
   const handleLanguageToggle = () => {
     const nextLang = language === 'zh' ? 'en' : 'zh';
     setLanguage(nextLang);
@@ -59,6 +106,38 @@ const App: React.FC = () => {
   };
 
   const t = translations[language];
+
+  const handleClearAllData = async () => {
+    if (!window.confirm(t.confirm_clear_all)) return;
+
+    try {
+      await Promise.all([
+        tauriStorageService.saveExercises(INITIAL_EXERCISES),
+        tauriStorageService.saveLogs([]),
+        tauriStorageService.savePlans([])
+      ]);
+      setExercises(INITIAL_EXERCISES);
+      setLogs([]);
+      setPlans([]);
+    } catch (error) {
+      console.error('Failed to clear data:', error);
+    } finally {
+      setIsSettingsOpen(false);
+    }
+  };
+
+  const handleUpdateExercises = async (newExercises: Exercise[]) => {
+    setExercises(newExercises);
+    try {
+      await tauriStorageService.saveExercises(newExercises);
+    } catch (error) {
+      console.error('Failed to save exercises:', error);
+    }
+  };
+
+  const handleCloseExerciseManager = () => {
+    setIsExerciseManagerOpen(false);
+  };
 
   const handleUpdateLogs = async (newLogs: WorkoutEntry[]) => {
     setLogs(newLogs);
@@ -104,7 +183,7 @@ const App: React.FC = () => {
   return (
     <div className="h-screen bg-white md:bg-slate-50 flex flex-col md:flex-row overflow-hidden">
       
-      <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 p-6 flex-col h-screen sticky top-0">
+      <aside className={`hidden md:flex w-72 bg-white border-r border-slate-200 p-6 flex-col h-screen sticky top-0 ${isExerciseManagerOpen ? 'pointer-events-none opacity-50' : ''}`}>
         <div className="flex items-center space-x-2 mb-10">
           <Activity className="text-indigo-600" size={32} />
           <h1 className="text-2xl font-black tracking-tight text-slate-900 italic uppercase">Titan<span className="text-indigo-600">Track</span></h1>
@@ -138,7 +217,7 @@ const App: React.FC = () => {
         </button>
       </aside>
 
-      <header className="md:hidden pt-safe sticky top-0 bg-white/80 backdrop-blur-xl z-40 px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm shadow-slate-200/20">
+      <header className={`md:hidden pt-safe sticky top-0 bg-white/80 backdrop-blur-xl z-40 px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm shadow-slate-200/20 ${isExerciseManagerOpen ? 'pointer-events-none opacity-50' : ''}`}>
         <div className="flex items-center space-x-2">
           <div className="p-1.5 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-100">
             <Activity className="text-white" size={20} />
@@ -153,9 +232,42 @@ const App: React.FC = () => {
           >
             {language === 'zh' ? 'EN' : '中文'}
           </button>
-          <button type="button" className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-            <Settings size={22} />
-          </button>
+          <div ref={settingsRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen((prev) => !prev)}
+              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              aria-haspopup="true"
+              aria-expanded={isSettingsOpen}
+            >
+              <Settings size={22} />
+            </button>
+            {isSettingsOpen && (
+              <div className="absolute right-0 mt-3 w-60 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur-lg shadow-2xl p-2 z-50 animate-in zoom-in-95 fade-in duration-200 origin-top-right">
+                <div className="px-3 pt-2 pb-1 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  {t.settings}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    setIsExerciseManagerOpen(true);
+                  }}
+                  className="group flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-black text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+                >
+                  <Dumbbell size={18} className="text-indigo-500 group-hover:text-indigo-600" />
+                  <span className="uppercase tracking-widest text-[11px]">{t.manage_exercises}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearAllData}
+                  className="group flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-black text-rose-600 hover:bg-rose-50 transition-all"
+                >
+                  {t.clear_all_data}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -193,12 +305,46 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 px-6 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] z-50 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+      {isExerciseManagerOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 relative">
+          <button
+            type="button"
+            className="absolute inset-0"
+            onClick={handleCloseExerciseManager}
+            aria-label={t.close}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 w-full max-w-5xl max-h-[85vh] bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
+          >
+            <button
+              type="button"
+              onClick={handleCloseExerciseManager}
+              className="absolute top-4 right-4 z-10 p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+              aria-label={t.close}
+            >
+              <X size={18} />
+            </button>
+            <div className="flex-1 overflow-y-auto p-6 md:p-8">
+              <ExerciseManager
+                exercises={exercises}
+                onUpdateExercises={handleUpdateExercises}
+                language={language}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 px-6 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] z-50 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.03)] transition ${isExerciseManagerOpen ? 'pointer-events-none opacity-40 blur-[1px]' : ''}`}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => navigateToTab(tab.id)}
+            disabled={isExerciseManagerOpen}
+            aria-disabled={isExerciseManagerOpen}
             className={`flex flex-col items-center space-y-1 relative transition-colors duration-300 ${
               activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400'
             }`}

@@ -1,9 +1,21 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import {
+  ArrowRight,
+  Calendar,
+  Check,
+  CheckCircle,
+  ClipboardList,
+  Clock,
+  Play,
+  Plus,
+  SkipForward,
+  Trash2,
+  X,
+} from 'lucide-react';
+import type { FC } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { WorkoutEntry, Exercise, WorkoutSet, Language, WorkoutPlan } from '../types';
 import { translations } from '../translations';
-import { Plus, Trash2, ClipboardList, X, CheckCircle, Calendar, ArrowRight, Play, Clock, Check, SkipForward } from 'lucide-react';
+import type { Exercise, Language, WorkoutEntry, WorkoutPlan, WorkoutSet } from '../types';
 
 interface WorkoutLogProps {
   logs: WorkoutEntry[];
@@ -14,15 +26,17 @@ interface WorkoutLogProps {
   language: Language;
 }
 
-const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs, onUpdatePlans, language }) => {
+const WorkoutLog: FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs, onUpdatePlans, language }) => {
   const t = translations[language];
   const [isAdding, setIsAdding] = useState(false);
   
   // State for the multi-exercise form (plan based)
   const [activePlan, setActivePlan] = useState<WorkoutPlan | null>(null);
   const [planProgress, setPlanProgress] = useState<{ exerciseId: string; sets: WorkoutSet[]; skipped?: boolean }[]>([]);
+  const [activePlanOriginalDate, setActivePlanOriginalDate] = useState<string | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
+  const hasExercises = exercises.length > 0;
 
   // Find the next nearest incomplete plan
   const upcomingPlan = useMemo(() => {
@@ -45,10 +59,12 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
   const startLoggingPlan = (plan: WorkoutPlan, forceToday: boolean = false) => {
     let targetPlan = plan;
     if (forceToday && plan.date !== todayStr) {
-      // Update plan date in parent state
+      setActivePlanOriginalDate(plan.date);
       const updatedPlans = plans.map(p => p.id === plan.id ? { ...p, date: todayStr } : p);
       onUpdatePlans(updatedPlans);
       targetPlan = { ...plan, date: todayStr };
+    } else {
+      setActivePlanOriginalDate(null);
     }
 
     setActivePlan(targetPlan);
@@ -67,7 +83,11 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
     sets: [{ id: '1', weight: 0, reps: 0, rpe: 7, completed: true }] as WorkoutSet[]
   });
 
-  const updatePlanSet = (exIdx: number, setIdx: number, field: keyof WorkoutSet, value: any) => {
+  const formDateId = 'workout-log-date';
+  const formTypeId = 'workout-log-type';
+  const formExerciseId = 'workout-log-exercise';
+
+  const updatePlanSet = (exIdx: number, setIdx: number, field: keyof WorkoutSet, value: WorkoutSet[keyof WorkoutSet]) => {
     const updatedProgress = [...planProgress];
     updatedProgress[exIdx].sets[setIdx] = {
       ...updatedProgress[exIdx].sets[setIdx],
@@ -97,6 +117,17 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
     setPlanProgress(updatedProgress);
   };
 
+  const handleCancelLogging = () => {
+    if (activePlan && activePlanOriginalDate && activePlan.date !== activePlanOriginalDate) {
+      const updatedPlans = plans.map(p => p.id === activePlan.id ? { ...p, date: activePlanOriginalDate } : p);
+      onUpdatePlans(updatedPlans);
+    }
+    setIsAdding(false);
+    setActivePlan(null);
+    setPlanProgress([]);
+    setActivePlanOriginalDate(null);
+  };
+
   const handleCompletePlan = () => {
     if (!activePlan) return;
     
@@ -121,6 +152,8 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
     
     setIsAdding(false);
     setActivePlan(null);
+    setPlanProgress([]);
+    setActivePlanOriginalDate(null);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -166,17 +199,21 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <button 
-                      onClick={() => startLoggingPlan(upcomingPlan, upcomingPlan.date !== todayStr)}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-indigo-900/20"
-                    >
+                      <button 
+                        type="button"
+                        onClick={() => startLoggingPlan(upcomingPlan, upcomingPlan.date !== todayStr)}
+                        disabled={!hasExercises}
+                        className={`flex-1 font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg ${hasExercises ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20' : 'bg-slate-700/40 text-slate-300 cursor-not-allowed shadow-none'}`}
+                      >
                       <Play size={18} fill="currentColor" />
                       <span className="uppercase text-sm tracking-widest">{upcomingPlan.date === todayStr ? 'Start Now' : 'Move to Today & Start'}</span>
                     </button>
-                    <button 
-                      onClick={() => setIsAdding(true)}
-                      className="bg-white/10 hover:bg-white/20 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all backdrop-blur-sm"
-                    >
+                      <button 
+                        type="button"
+                        onClick={() => setIsAdding(true)}
+                        disabled={!hasExercises}
+                        className={`font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all backdrop-blur-sm ${hasExercises ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white/5 text-slate-400 cursor-not-allowed'}`}
+                      >
                       <Plus size={18} />
                       <span className="uppercase text-sm tracking-widest">Other</span>
                     </button>
@@ -186,8 +223,10 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                 <div className="space-y-6">
                   <p className="text-slate-400 font-bold italic">No plans scheduled. Ready to wing it?</p>
                   <button 
+                    type="button"
                     onClick={() => setIsAdding(true)}
-                    className="w-full bg-white text-slate-900 font-black py-4 px-10 rounded-2xl shadow-lg active:scale-95 transition-transform uppercase tracking-widest text-sm"
+                    disabled={!hasExercises}
+                    className={`w-full font-black py-4 px-10 rounded-2xl shadow-lg active:scale-95 transition-transform uppercase tracking-widest text-sm ${hasExercises ? 'bg-white text-slate-900' : 'bg-slate-700/40 text-slate-300 cursor-not-allowed shadow-none'}`}
                   >
                     {t.log_new_session}
                   </button>
@@ -230,7 +269,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
       ) : createPortal(
         <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
           <div className="pt-safe px-6 py-4 flex items-center justify-between border-b border-slate-100">
-            <button onClick={() => setIsAdding(false)} className="p-2 text-slate-400 bg-slate-50 rounded-xl">
+            <button type="button" onClick={handleCancelLogging} className="p-2 text-slate-400 bg-slate-50 rounded-xl">
               <X size={24} />
             </button>
             <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">
@@ -242,32 +281,35 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
           <div className="flex-grow overflow-y-auto p-6 space-y-8 pb-32">
              {activePlan ? (
                <div className="space-y-12">
-                 {planProgress.map((p, exIdx) => {
-                   const ex = exercises.find(e => e.id === p.exerciseId);
-                   const completedSetsCount = p.sets.filter(s => s.completed).length;
-                   const allDone = completedSetsCount === p.sets.length;
+                  {planProgress.map((p, exIdx) => {
+                    const ex = exercises.find(e => e.id === p.exerciseId);
+                    const completedSetsCount = p.sets.filter(s => s.completed).length;
+                    const allDone = completedSetsCount === p.sets.length;
+ 
+                    return (
+                      <div key={p.exerciseId} className={`space-y-4 transition-all duration-300 ${p.skipped ? 'opacity-40 grayscale scale-[0.98]' : 'opacity-100'}`}>
 
-                   return (
-                     <div key={exIdx} className={`space-y-4 transition-all duration-300 ${p.skipped ? 'opacity-40 grayscale scale-[0.98]' : 'opacity-100'}`}>
                        <div className="flex items-center justify-between px-1">
                          <div className="flex items-center gap-3">
                            <div className={`w-1.5 h-6 rounded-full transition-colors ${p.skipped ? 'bg-slate-300' : allDone ? 'bg-emerald-500' : 'bg-indigo-600'}`}></div>
                            <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight italic">{ex?.name}</h4>
                          </div>
                          <div className="flex gap-2">
-                           <button 
-                             onClick={() => toggleSkipExercise(exIdx)}
-                             className={`p-2 rounded-xl border transition-all ${p.skipped ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200'}`}
-                             title={t.skip_exercise}
-                           >
+                            <button 
+                              type="button"
+                              onClick={() => toggleSkipExercise(exIdx)}
+                              className={`p-2 rounded-xl border transition-all ${p.skipped ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200'}`}
+                              title={t.skip_exercise}
+                            >
                              <SkipForward size={16} />
                            </button>
                            {!p.skipped && (
-                             <button 
-                               onClick={() => completeAllSets(exIdx)}
-                               className={`p-2 rounded-xl border transition-all ${allDone ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-emerald-500 border-emerald-200'}`}
-                               title={t.complete_all}
-                             >
+                              <button 
+                                type="button"
+                                onClick={() => completeAllSets(exIdx)}
+                                className={`p-2 rounded-xl border transition-all ${allDone ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-emerald-500 border-emerald-200'}`}
+                                title={t.complete_all}
+                              >
                                <Check size={16} />
                              </button>
                            )}
@@ -275,15 +317,17 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                        </div>
                        
                        {!p.skipped && (
-                         <div className="space-y-3">
-                           {p.sets.map((set, setIdx) => (
-                             <div key={setIdx} className={`bg-slate-50 p-5 rounded-[2rem] transition-all border-2 ${set.completed ? 'opacity-60 border-emerald-500 bg-emerald-50/20' : 'border-transparent'}`}>
+                          <div className="space-y-3">
+                            {p.sets.map((set, setIdx) => (
+                              <div key={set.id || `${p.exerciseId}-${setIdx}`} className={`bg-slate-50 p-5 rounded-[2rem] transition-all border-2 ${set.completed ? 'opacity-60 border-emerald-500 bg-emerald-50/20' : 'border-transparent'}`}>
+
                                <div className="flex justify-between items-center mb-4 px-1">
                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Set {setIdx + 1}</span>
-                                 <button 
-                                   onClick={() => updatePlanSet(exIdx, setIdx, 'completed', !set.completed)}
-                                   className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl transition-all ${set.completed ? 'bg-emerald-500 text-white shadow-md shadow-emerald-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-300'}`}
-                                 >
+                                  <button 
+                                    type="button"
+                                    onClick={() => updatePlanSet(exIdx, setIdx, 'completed', !set.completed)}
+                                    className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl transition-all ${set.completed ? 'bg-emerald-500 text-white shadow-md shadow-emerald-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-300'}`}
+                                  >
                                    {set.completed ? t.status_completed : t.status_incomplete}
                                  </button>
                                </div>
@@ -299,21 +343,21 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                                  </div>
                                  <div className="bg-white p-3 rounded-2xl text-center shadow-sm">
                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Reps</p>
-                                   <input 
-                                     type="number" 
-                                     value={set.reps} 
-                                     onChange={e => updatePlanSet(exIdx, setIdx, 'reps', parseInt(e.target.value))}
-                                     className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
-                                   />
+                                    <input 
+                                      type="number" 
+                                      value={set.reps} 
+                                      onChange={e => updatePlanSet(exIdx, setIdx, 'reps', parseInt(e.target.value, 10))}
+                                      className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
+                                    />
                                  </div>
                                  <div className="bg-white p-3 rounded-2xl text-center shadow-sm">
                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">RPE</p>
-                                   <input 
-                                     type="number" 
-                                     value={set.rpe} 
-                                     onChange={e => updatePlanSet(exIdx, setIdx, 'rpe', parseInt(e.target.value))}
-                                     className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
-                                   />
+                                    <input 
+                                      type="number" 
+                                      value={set.rpe} 
+                                      onChange={e => updatePlanSet(exIdx, setIdx, 'rpe', parseInt(e.target.value, 10))}
+                                      className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
+                                    />
                                  </div>
                                </div>
                                <input 
@@ -334,6 +378,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                               <SkipForward size={14} /> Exercise Skipped
                             </p>
                             <button 
+                              type="button"
                               onClick={() => toggleSkipExercise(exIdx)}
                               className="mt-2 text-[10px] font-bold text-indigo-600 underline"
                             >
@@ -345,93 +390,105 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdat
                    );
                  })}
                </div>
-             ) : (
-               <div className="space-y-6 animate-in fade-in duration-500">
-                 <div className="space-y-4">
-                   <div className="grid grid-cols-2 gap-3">
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.date}</label>
-                       <input 
-                        type="date" 
-                        value={formData.date}
-                        onChange={e => setFormData({...formData, date: e.target.value})}
-                        className="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
-                       />
-                     </div>
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.type}</label>
-                       <input 
-                        type="text" 
-                        placeholder={t.type}
-                        value={formData.workoutType}
-                        onChange={e => setFormData({...formData, workoutType: e.target.value})}
-                        className="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
-                       />
-                     </div>
-                   </div>
-
-                   <div className="space-y-1">
-                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.exercise}</label>
-                     <select 
-                        value={formData.exerciseId}
-                        onChange={e => setFormData({...formData, exerciseId: e.target.value})}
-                        className="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold text-slate-900 appearance-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
-                     >
-                       {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-                     </select>
-                   </div>
-                 </div>
-
-                 <div className="space-y-3">
-                    <div className="flex justify-between items-center px-1 mb-2">
-                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{t.sets_data}</h4>
-                      <button type="button" onClick={() => setFormData({...formData, sets: [...formData.sets, { id: Math.random().toString(), weight: 0, reps: 0, rpe: 7, completed: true }]})} className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">+ {t.add_set.toUpperCase()}</button>
-                    </div>
-                    {formData.sets.map((set, i) => (
-                      <div key={set.id} className="bg-slate-50 p-5 rounded-[2rem] flex flex-col gap-4 border border-slate-100 shadow-sm">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-black text-slate-400 border border-slate-100 flex-shrink-0 shadow-sm">
-                            {i + 1}
-                          </div>
-                          <div className="flex-1 grid grid-cols-3 gap-2">
-                            <div className="bg-white p-2 rounded-xl text-center shadow-sm">
-                              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">KG</p>
-                              <input type="number" placeholder="KG" value={set.weight || ''} onChange={e => {
-                                 const updated = [...formData.sets];
-                                 updated[i].weight = parseFloat(e.target.value);
-                                 setFormData({...formData, sets: updated});
-                              }} className="w-full text-center font-black text-slate-900 bg-transparent outline-none" />
-                            </div>
-                            <div className="bg-white p-2 rounded-xl text-center shadow-sm">
-                              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Reps</p>
-                              <input type="number" placeholder="REPS" value={set.reps || ''} onChange={e => {
-                                 const updated = [...formData.sets];
-                                 updated[i].reps = parseInt(e.target.value);
-                                 setFormData({...formData, sets: updated});
-                              }} className="w-full text-center font-black text-slate-900 bg-transparent outline-none" />
-                            </div>
-                            <div className="bg-white p-2 rounded-xl text-center shadow-sm">
-                              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">RPE</p>
-                              <input type="number" placeholder="RPE" value={set.rpe || ''} onChange={e => {
-                                 const updated = [...formData.sets];
-                                 updated[i].rpe = parseInt(e.target.value);
-                                 setFormData({...formData, sets: updated});
-                              }} className="w-full text-center font-black text-slate-900 bg-transparent outline-none" />
-                            </div>
-                          </div>
-                          <button type="button" onClick={() => setFormData({...formData, sets: formData.sets.filter(s => s.id !== set.id)})} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"><Trash2 size={18}/></button>
+              ) : (
+                !hasExercises ? (
+                  <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-6 text-center space-y-2">
+                    <p className="text-sm font-black text-slate-700 uppercase tracking-widest">{t.no_exercises_title}</p>
+                    <p className="text-xs font-bold text-slate-400">{t.no_exercises_hint}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6 animate-in fade-in duration-500">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label htmlFor={formDateId} className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.date}</label>
+                          <input
+                            id={formDateId}
+                            type="date"
+                            value={formData.date}
+                            onChange={e => setFormData({...formData, date: e.target.value})}
+                            className="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor={formTypeId} className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.type}</label>
+                          <input
+                            id={formTypeId}
+                            type="text"
+                            placeholder={t.type}
+                            value={formData.workoutType}
+                            onChange={e => setFormData({...formData, workoutType: e.target.value})}
+                            className="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                          />
                         </div>
                       </div>
-                    ))}
-                 </div>
-               </div>
-             )}
+
+                      <div className="space-y-1">
+                        <label htmlFor={formExerciseId} className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.exercise}</label>
+                        <select
+                          id={formExerciseId}
+                          value={formData.exerciseId}
+                          onChange={e => setFormData({...formData, exerciseId: e.target.value})}
+                          className="w-full bg-slate-50 p-4 rounded-2xl border-none font-bold text-slate-900 appearance-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                        >
+                          {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+ 
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center px-1 mb-2">
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{t.sets_data}</h4>
+                        <button type="button" onClick={() => setFormData({...formData, sets: [...formData.sets, { id: Math.random().toString(), weight: 0, reps: 0, rpe: 7, completed: true }]})} className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">+ {t.add_set.toUpperCase()}</button>
+                      </div>
+                      {formData.sets.map((set, i) => (
+                        <div key={set.id} className="bg-slate-50 p-5 rounded-[2rem] flex flex-col gap-4 border border-slate-100 shadow-sm">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-black text-slate-400 border border-slate-100 flex-shrink-0 shadow-sm">
+                              {i + 1}
+                            </div>
+                            <div className="flex-1 grid grid-cols-3 gap-2">
+                              <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">KG</p>
+                                <input type="number" placeholder="KG" value={set.weight || ''} onChange={e => {
+                                   const updated = [...formData.sets];
+                                   updated[i].weight = parseFloat(e.target.value);
+                                   setFormData({...formData, sets: updated});
+                                }} className="w-full text-center font-black text-slate-900 bg-transparent outline-none" />
+                              </div>
+                              <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Reps</p>
+                              <input type="number" placeholder="REPS" value={set.reps || ''} onChange={e => {
+                                 const updated = [...formData.sets];
+                                 updated[i].reps = parseInt(e.target.value, 10);
+                                 setFormData({...formData, sets: updated});
+                              }} className="w-full text-center font-black text-slate-900 bg-transparent outline-none" />
+                              </div>
+                              <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">RPE</p>
+                              <input type="number" placeholder="RPE" value={set.rpe || ''} onChange={e => {
+                                 const updated = [...formData.sets];
+                                 updated[i].rpe = parseInt(e.target.value, 10);
+                                 setFormData({...formData, sets: updated});
+                              }} className="w-full text-center font-black text-slate-900 bg-transparent outline-none" />
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => setFormData({...formData, sets: formData.sets.filter(s => s.id !== set.id)})} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"><Trash2 size={18}/></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg pb-[calc(1.5rem+env(safe-area-inset-bottom))] border-t border-slate-100">
              <button 
+                type="button"
                 onClick={activePlan ? handleCompletePlan : handleManualSubmit}
-                className="w-full bg-indigo-600 text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-indigo-100 active:scale-95 transition-transform uppercase tracking-widest text-sm"
+                disabled={!hasExercises}
+                className={`w-full font-black py-5 rounded-[2rem] shadow-2xl active:scale-95 transition-transform uppercase tracking-widest text-sm ${hasExercises ? 'bg-indigo-600 text-white shadow-indigo-100' : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed'}`}
              >
                {activePlan ? t.complete_plan : t.save_workout}
              </button>

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Exercise, WorkoutEntry, WorkoutPlan } from '../types';
-import { INITIAL_EXERCISES, INITIAL_LOGS, INITIAL_PLANS } from '../constants';
+import { INITIAL_EXERCISES } from '../constants';
+import type { Exercise, WorkoutEntry, WorkoutPlan } from '../types';
 
 const isTauri = () => {
   try {
@@ -8,6 +8,18 @@ const isTauri = () => {
   } catch {
     return false;
   }
+};
+
+const getLocalStorageItem = <T>(key: string, fallback: T): T => {
+  const data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : fallback;
+};
+
+const getOrInitLocalStorage = <T>(key: string, initial: T): T => {
+  const data = localStorage.getItem(key);
+  if (data) return JSON.parse(data);
+  localStorage.setItem(key, JSON.stringify(initial));
+  return initial;
 };
 
 export const tauriStorageService = {
@@ -20,15 +32,12 @@ export const tauriStorageService = {
           return INITIAL_EXERCISES;
         }
         return exercises;
-      } else {
-        const data = localStorage.getItem('titan_track_exercises');
-        return data ? JSON.parse(data) : INITIAL_EXERCISES;
       }
+      return getOrInitLocalStorage('titan_track_exercises', INITIAL_EXERCISES);
     } catch (error) {
       console.error('Failed to get exercises:', error);
       if (!isTauri()) {
-        const data = localStorage.getItem('titan_track_exercises');
-        return data ? JSON.parse(data) : INITIAL_EXERCISES;
+        return getOrInitLocalStorage('titan_track_exercises', INITIAL_EXERCISES);
       }
       return INITIAL_EXERCISES;
     }
@@ -50,23 +59,15 @@ export const tauriStorageService = {
   getLogs: async (): Promise<WorkoutEntry[]> => {
     try {
       if (isTauri()) {
-        const logs = await invoke<WorkoutEntry[]>('get_logs');
-        if (logs.length === 0) {
-          await tauriStorageService.saveLogs(INITIAL_LOGS);
-          return INITIAL_LOGS;
-        }
-        return logs;
-      } else {
-        const data = localStorage.getItem('titan_track_logs');
-        return data ? JSON.parse(data) : INITIAL_LOGS;
+        return await invoke<WorkoutEntry[]>('get_logs');
       }
+      return getLocalStorageItem('titan_track_logs', []);
     } catch (error) {
       console.error('Failed to get logs:', error);
       if (!isTauri()) {
-        const data = localStorage.getItem('titan_track_logs');
-        return data ? JSON.parse(data) : INITIAL_LOGS;
+        return getLocalStorageItem('titan_track_logs', []);
       }
-      return INITIAL_LOGS;
+      return [];
     }
   },
 
@@ -86,23 +87,15 @@ export const tauriStorageService = {
   getPlans: async (): Promise<WorkoutPlan[]> => {
     try {
       if (isTauri()) {
-        const plans = await invoke<WorkoutPlan[]>('get_plans');
-        if (plans.length === 0) {
-          await tauriStorageService.savePlans(INITIAL_PLANS);
-          return INITIAL_PLANS;
-        }
-        return plans;
-      } else {
-        const data = localStorage.getItem('titan_track_plans');
-        return data ? JSON.parse(data) : INITIAL_PLANS;
+        return await invoke<WorkoutPlan[]>('get_plans');
       }
+      return getLocalStorageItem('titan_track_plans', []);
     } catch (error) {
       console.error('Failed to get plans:', error);
       if (!isTauri()) {
-        const data = localStorage.getItem('titan_track_plans');
-        return data ? JSON.parse(data) : INITIAL_PLANS;
+        return getLocalStorageItem('titan_track_plans', []);
       }
-      return INITIAL_PLANS;
+      return [];
     }
   },
 

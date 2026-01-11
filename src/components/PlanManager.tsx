@@ -30,6 +30,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
   const [isAdding, setIsAdding] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
+  const hasExercises = exercises.length > 0;
 
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(true);
   const [isPastExpanded, setIsPastExpanded] = useState(false);
@@ -365,7 +366,8 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
         <button
           type="button"
           onClick={handleStartAdd}
-          className="bg-indigo-600 text-white p-3 rounded-2xl shadow-lg active:scale-95 transition-transform"
+          disabled={!hasExercises}
+          className={`p-3 rounded-2xl shadow-lg active:scale-95 transition-transform ${hasExercises ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
         >
           <Plus size={24} />
         </button>
@@ -412,121 +414,136 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
             <div className="space-y-2">
               <div className="flex justify-between items-center px-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.exercise}</span>
-                <button type="button" onClick={addExerciseToPlan} className="text-[10px] font-black text-indigo-600 uppercase tracking-tight">+ {t.exercise}</button>
+                <button
+                  type="button"
+                  onClick={addExerciseToPlan}
+                  disabled={!hasExercises}
+                  className={`text-[10px] font-black uppercase tracking-tight ${hasExercises ? 'text-indigo-600' : 'text-slate-300 cursor-not-allowed'}`}
+                >
+                  + {t.exercise}
+                </button>
               </div>
 
-              {newPlan.exercises?.map((item: PlanFormExercise, idx: number) => (
-                <div key={item.id} className="bg-slate-50 p-4 rounded-2xl space-y-3 relative group">
-                  <button
-                    type="button"
-                    onClick={() => removeExerciseFromPlan(idx)}
-                    className="absolute -top-1 -right-1 bg-white p-1.5 rounded-full text-rose-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <X size={12} />
-                  </button>
+              {!hasExercises ? (
+                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-5 text-center space-y-2">
+                  <p className="text-xs font-black text-slate-700 uppercase tracking-widest">{t.no_exercises_plan_title}</p>
+                  <p className="text-[11px] font-bold text-slate-400">{t.no_exercises_plan_hint}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {newPlan.exercises?.map((item: PlanFormExercise, idx: number) => (
+                    <div key={item.id} className="bg-slate-50 p-4 rounded-2xl space-y-3 relative group">
+                      <button
+                        type="button"
+                        onClick={() => removeExerciseFromPlan(idx)}
+                        className="absolute -top-1 -right-1 bg-white p-1.5 rounded-full text-rose-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        <X size={12} />
+                      </button>
 
-                  <div className="space-y-1">
-                    <label htmlFor={`exercise-select-${item.id}`} className="sr-only">{t.exercise}</label>
-                    <select
-                      id={`exercise-select-${item.id}`}
-                      value={item.exerciseId}
-                      onChange={e => {
-                        const updated = [...(newPlan.exercises || [])];
-                        updated[idx].exerciseId = e.target.value;
-                        setNewPlan({ ...newPlan, exercises: updated });
-                      }}
-                      className="w-full bg-white p-2.5 rounded-lg border-none text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    {item.sets.map((group: PlanSetGroup, groupIdx: number) => (
-                      <div key={group.id} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
-                        <div className="flex-1 flex items-center gap-1">
-                          <input
-                            type="number"
-                            aria-label="Weight"
-                            value={group.weight || 0}
-                            onChange={e => {
-                              const updated = [...(newPlan.exercises || [])];
-                              updated[idx].sets[groupIdx] = { ...group, weight: parseFloat(e.target.value) || 0 };
-                              setNewPlan({ ...newPlan, exercises: updated });
-                            }}
-                            className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
-                            placeholder="0"
-                          />
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">kg</span>
-                        </div>
-
-                        <div className="flex-1 flex items-center gap-1">
-                          <input
-                            type="number"
-                            aria-label="Reps"
-                            value={group.reps || 0}
-                            onChange={e => {
-                              const updated = [...(newPlan.exercises || [])];
-                              updated[idx].sets[groupIdx] = { ...group, reps: parseInt(e.target.value, 10) || 0 };
-                              setNewPlan({ ...newPlan, exercises: updated });
-                            }}
-                            className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
-                            placeholder="0"
-                          />
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">reps</span>
-                        </div>
-
-                        <div className="w-16 flex items-center gap-1 bg-indigo-50/50 rounded-lg px-2 py-1.5 border border-indigo-100">
-                          <span className="text-[10px] font-black text-indigo-400 italic">×</span>
-                          <input
-                            type="number"
-                            min={1}
-                            aria-label="Set count"
-                            value={group.count ?? 1}
-                            onChange={e => {
-                              const nextCount = Math.max(1, parseInt(e.target.value, 10) || 1);
-                              const updated = [...(newPlan.exercises || [])];
-                              updated[idx].sets[groupIdx] = { ...group, count: nextCount };
-                              setNewPlan({ ...newPlan, exercises: updated });
-                            }}
-                            className="w-full text-center text-sm font-black text-indigo-600 bg-transparent border-none p-0 focus:ring-0"
-                            placeholder="1"
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
+                      <div className="space-y-1">
+                        <label htmlFor={`exercise-select-${item.id}`} className="sr-only">{t.exercise}</label>
+                        <select
+                          id={`exercise-select-${item.id}`}
+                          value={item.exerciseId}
+                          onChange={e => {
                             const updated = [...(newPlan.exercises || [])];
-                            updated[idx].sets = updated[idx].sets.filter((_, i) => i !== groupIdx);
+                            updated[idx].exerciseId = e.target.value;
                             setNewPlan({ ...newPlan, exercises: updated });
                           }}
-                          className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="w-full bg-white p-2.5 rounded-lg border-none text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
-                          <X size={14} />
-                        </button>
+                          {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
+                        </select>
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = [...(newPlan.exercises || [])];
-                        updated[idx].sets.push({ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 });
-                        setNewPlan({ ...newPlan, exercises: updated });
-                      }}
-                      className="text-[10px] font-black text-indigo-600 uppercase italic tracking-widest bg-indigo-50 px-4 py-2.5 rounded-xl hover:bg-indigo-100 active:scale-95 transition-all shadow-sm"
-                    >
-                      + Add Group
-                    </button>
-                    <div className="flex-1 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest self-center">
-                      Total: {item.sets.reduce((acc: number, set: PlanSetGroup) => acc + (set.count ?? 1), 0)} Sets
+                      <div className="space-y-2">
+                        {item.sets.map((group: PlanSetGroup, groupIdx: number) => (
+                          <div key={group.id} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="flex-1 flex items-center gap-1">
+                              <input
+                                type="number"
+                                aria-label="Weight"
+                                value={group.weight || 0}
+                                onChange={e => {
+                                  const updated = [...(newPlan.exercises || [])];
+                                  updated[idx].sets[groupIdx] = { ...group, weight: parseFloat(e.target.value) || 0 };
+                                  setNewPlan({ ...newPlan, exercises: updated });
+                                }}
+                                className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+                                placeholder="0"
+                              />
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">kg</span>
+                            </div>
+
+                            <div className="flex-1 flex items-center gap-1">
+                              <input
+                                type="number"
+                                aria-label="Reps"
+                                value={group.reps || 0}
+                                onChange={e => {
+                                  const updated = [...(newPlan.exercises || [])];
+                                  updated[idx].sets[groupIdx] = { ...group, reps: parseInt(e.target.value, 10) || 0 };
+                                  setNewPlan({ ...newPlan, exercises: updated });
+                                }}
+                                className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+                                placeholder="0"
+                              />
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">reps</span>
+                            </div>
+
+                            <div className="w-16 flex items-center gap-1 bg-indigo-50/50 rounded-lg px-2 py-1.5 border border-indigo-100">
+                              <span className="text-[10px] font-black text-indigo-400 italic">×</span>
+                              <input
+                                type="number"
+                                min={1}
+                                aria-label="Set count"
+                                value={group.count ?? 1}
+                                onChange={e => {
+                                  const nextCount = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                  const updated = [...(newPlan.exercises || [])];
+                                  updated[idx].sets[groupIdx] = { ...group, count: nextCount };
+                                  setNewPlan({ ...newPlan, exercises: updated });
+                                }}
+                                className="w-full text-center text-sm font-black text-indigo-600 bg-transparent border-none p-0 focus:ring-0"
+                                placeholder="1"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...(newPlan.exercises || [])];
+                                const sets = [...updated[idx].sets];
+                                sets.splice(groupIdx, 1);
+                                updated[idx].sets = sets.length
+                                  ? sets
+                                  : [{ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 }];
+                                setNewPlan({ ...newPlan, exercises: updated });
+                              }}
+                              className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...(newPlan.exercises || [])];
+                          updated[idx].sets.push({ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 });
+                          setNewPlan({ ...newPlan, exercises: updated });
+                        }}
+                        className="text-[10px] font-black text-indigo-600 uppercase tracking-tight"
+                      >
+                        + {t.add_set}
+                      </button>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
