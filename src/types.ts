@@ -65,3 +65,31 @@ export interface NavigationParams {
   date?: string
   [key: string]: unknown
 }
+
+// AI Settings
+export type AIProvider = 'openai' | 'anthropic' | 'gemini' | 'deepseek'
+
+export interface AISettings {
+  provider: AIProvider
+  apiKey: string
+  model?: string
+}
+
+export interface AIRequestMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export const AI_MODELS: Record<AIProvider, string[]> = {
+  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+  anthropic: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022'],
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-pro-preview-06-05'],
+  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+}
+
+export const DEFAULT_MODELS: Record<AIProvider, string> = {
+  openai: 'gpt-4o-mini',
+  anthropic: 'claude-3-5-haiku-20241022',
+  gemini: 'gemini-2.0-flash',
+  deepseek: 'deepseek-chat',
+}

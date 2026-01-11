@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bot,
   CalendarDays,
   Dumbbell,
   Globe,
@@ -13,6 +14,7 @@ import {
 import type { FC } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import AICoach from './components/AICoach'
+import AISettingsModal from './components/AISettingsModal'
 import Dashboard from './components/Dashboard'
 import ExerciseManager from './components/ExerciseManager'
 import PlanManager from './components/PlanManager'
@@ -21,6 +23,7 @@ import { INITIAL_EXERCISES } from './constants'
 import { tauriStorageService } from './services/tauriStorageService'
 import { translations } from './translations'
 import {
+  type AISettings,
   type Exercise,
   type Language,
   type NavigationParams,
@@ -39,20 +42,24 @@ const App: FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false)
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState(false)
+  const [aiSettings, setAISettings] = useState<AISettings | null>(null)
   const settingsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true)
-        const [loadedExercises, loadedLogs, loadedPlans] = await Promise.all([
+        const [loadedExercises, loadedLogs, loadedPlans, loadedAISettings] = await Promise.all([
           tauriStorageService.getExercises(),
           tauriStorageService.getLogs(),
           tauriStorageService.getPlans(),
+          tauriStorageService.getAISettings(),
         ])
         setExercises(loadedExercises)
         setLogs(loadedLogs)
         setPlans(loadedPlans)
+        setAISettings(loadedAISettings)
       } catch (error) {
         console.error('Failed to load data:', error)
       } finally {
@@ -155,6 +162,13 @@ const App: FC = () => {
     setPlans(newPlans)
     tauriStorageService.savePlans(newPlans).catch((error: unknown) => {
       console.error('Failed to save plans:', error)
+    })
+  }
+
+  const handleSaveAISettings = (newSettings: AISettings) => {
+    setAISettings(newSettings)
+    tauriStorageService.saveAISettings(newSettings).catch((error: unknown) => {
+      console.error('Failed to save AI settings:', error)
     })
   }
 
@@ -263,6 +277,17 @@ const App: FC = () => {
                   type="button"
                   onClick={() => {
                     setIsSettingsOpen(false)
+                    setIsAISettingsOpen(true)
+                  }}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
+                >
+                  <Bot size={18} className="text-indigo-500 group-hover:text-indigo-600" />
+                  <span className="text-[11px] tracking-widest uppercase">{t.ai_settings}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSettingsOpen(false)
                     setIsExerciseManagerOpen(true)
                   }}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
@@ -318,7 +343,15 @@ const App: FC = () => {
             />
           )}
           {activeTab === TabType.AI_COACH && (
-            <AICoach logs={logs} exercises={exercises} language={language} />
+            <AICoach
+              logs={logs}
+              exercises={exercises}
+              language={language}
+              aiSettings={aiSettings}
+              onOpenSettings={() => {
+                setIsAISettingsOpen(true)
+              }}
+            />
           )}
         </div>
       </main>
@@ -354,6 +387,16 @@ const App: FC = () => {
           </div>
         </div>
       )}
+
+      <AISettingsModal
+        isOpen={isAISettingsOpen}
+        onClose={() => {
+          setIsAISettingsOpen(false)
+        }}
+        settings={aiSettings}
+        onSave={handleSaveAISettings}
+        language={language}
+      />
 
       <nav
         className={`fixed right-0 bottom-0 left-0 z-50 flex items-center justify-between border-t border-slate-200 bg-white/90 px-6 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.03)] backdrop-blur-xl transition md:hidden ${isExerciseManagerOpen ? 'pointer-events-none opacity-40 blur-[1px]' : ''}`}

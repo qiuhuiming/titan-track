@@ -5,16 +5,18 @@ use std::sync::Mutex;
 use serde::{de::DeserializeOwned, Serialize};
 use tauri::{AppHandle, Manager};
 
-use crate::models::{Exercise, WorkoutEntry, WorkoutPlan};
+use crate::models::{AISettings, Exercise, WorkoutEntry, WorkoutPlan};
 
 const EXERCISES_FILE: &str = "exercises.json";
 const LOGS_FILE: &str = "logs.json";
 const PLANS_FILE: &str = "plans.json";
+const AI_SETTINGS_FILE: &str = "ai_settings.json";
 
 pub struct AppStorage {
     pub exercises: Mutex<Vec<Exercise>>,
     pub logs: Mutex<Vec<WorkoutEntry>>,
     pub plans: Mutex<Vec<WorkoutPlan>>,
+    pub ai_settings: Mutex<Option<AISettings>>,
     data_dir: PathBuf,
 }
 
@@ -32,11 +34,13 @@ impl AppStorage {
         let exercises = Self::load_json(&data_dir.join(EXERCISES_FILE)).unwrap_or_default();
         let logs = Self::load_json(&data_dir.join(LOGS_FILE)).unwrap_or_default();
         let plans = Self::load_json(&data_dir.join(PLANS_FILE)).unwrap_or_default();
+        let ai_settings = Self::load_json_single(&data_dir.join(AI_SETTINGS_FILE)).ok();
 
         Ok(Self {
             exercises: Mutex::new(exercises),
             logs: Mutex::new(logs),
             plans: Mutex::new(plans),
+            ai_settings: Mutex::new(ai_settings),
             data_dir,
         })
     }
@@ -55,6 +59,26 @@ impl AppStorage {
     }
 
     fn save_json<T: Serialize>(path: &PathBuf, data: &[T]) -> Result<(), String> {
+        let content = serde_json::to_string_pretty(data)
+            .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
+        fs::write(path, content)
+            .map_err(|e| format!("Failed to write file: {}", e))
+    }
+
+    fn load_json_single<T: DeserializeOwned>(path: &PathBuf) -> Result<T, String> {
+        if !path.exists() {
+            return Err("File does not exist".to_string());
+        }
+        let content = fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+        if content.trim().is_empty() {
+            return Err("File is empty".to_string());
+        }
+        serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse JSON: {}", e))
+    }
+
+    fn save_json_single<T: Serialize>(path: &PathBuf, data: &T) -> Result<(), String> {
         let content = serde_json::to_string_pretty(data)
             .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
         fs::write(path, content)
@@ -101,5 +125,19 @@ impl AppStorage {
             .map_err(|e| format!("Lock error: {}", e))?;
         *plans = new_plans;
         Self::save_json(&self.data_dir.join(PLANS_FILE), &plans)
+    }
+
+    // AI Settings
+    pub fn get_ai_settings(&self) -> Result<Option<AISettings>, String> {
+        let ai_settings = self.ai_settings.lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        Ok(ai_settings.clone())
+    }
+
+    pub fn save_ai_settings(&self, new_settings: AISettings) -> Result<(), String> {
+        let mut ai_settings = self.ai_settings.lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        *ai_settings = Some(new_settings.clone());
+        Self::save_json_single(&self.data_dir.join(AI_SETTINGS_FILE), &new_settings)
     }
 }

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { INITIAL_EXERCISES } from '../constants'
-import type { Exercise, WorkoutEntry, WorkoutPlan } from '../types'
+import type { AISettings, Exercise, WorkoutEntry, WorkoutPlan } from '../types'
 
 const isTauri = () => {
   try {
@@ -108,6 +108,31 @@ export const tauriStorageService = {
       }
     } catch (error) {
       console.error('Failed to save plans:', error)
+      throw error
+    }
+  },
+
+  getAISettings: async (): Promise<AISettings | null> => {
+    try {
+      if (isTauri()) {
+        return await invoke<AISettings | null>('get_ai_settings')
+      }
+      return getLocalStorageItem<AISettings | null>('titan_track_ai_settings', null)
+    } catch (error) {
+      console.error('Failed to get AI settings:', error)
+      return null
+    }
+  },
+
+  saveAISettings: async (settings: AISettings): Promise<void> => {
+    try {
+      if (isTauri()) {
+        await invoke('save_ai_settings', { settings })
+      } else {
+        localStorage.setItem('titan_track_ai_settings', JSON.stringify(settings))
+      }
+    } catch (error) {
+      console.error('Failed to save AI settings:', error)
       throw error
     }
   },

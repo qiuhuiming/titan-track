@@ -83,11 +83,11 @@ const PlanManager: React.FC<PlanManagerProps> = ({
 
   // Disable background scroll when modal is open
   useEffect(() => {
-    if (isAdding) {
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = ''
-      }
+    if (!isAdding) return
+
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
     }
   }, [isAdding])
 

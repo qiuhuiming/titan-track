@@ -30,6 +30,8 @@ pub fn run() {
             commands::save_logs,
             commands::get_plans,
             commands::save_plans,
+            commands::get_ai_settings,
+            commands::save_ai_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

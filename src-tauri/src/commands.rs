@@ -1,6 +1,6 @@
 use tauri::State;
 
-use crate::models::{Exercise, WorkoutEntry, WorkoutPlan};
+use crate::models::{AISettings, Exercise, WorkoutEntry, WorkoutPlan};
 use crate::storage::AppStorage;
 
 // ==================== EXERCISES ====================
@@ -37,4 +37,16 @@ pub fn get_plans(storage: State<AppStorage>) -> Result<Vec<WorkoutPlan>, String>
 #[tauri::command]
 pub fn save_plans(storage: State<AppStorage>, plans: Vec<WorkoutPlan>) -> Result<(), String> {
     storage.save_plans(plans)
+}
+
+// ==================== AI SETTINGS ====================
+
+#[tauri::command]
+pub fn get_ai_settings(storage: State<AppStorage>) -> Result<Option<AISettings>, String> {
+    storage.get_ai_settings()
+}
+
+#[tauri::command]
+pub fn save_ai_settings(storage: State<AppStorage>, settings: AISettings) -> Result<(), String> {
+    storage.save_ai_settings(settings)
 }
