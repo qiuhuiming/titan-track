@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronDown, ChevronUp, Clock, Edit2, Plus, Trash2, X } from 'lucide-react';
 import type { Exercise, Language, NavigationParams, WorkoutPlan, WorkoutSet } from '../types';
 import { translations } from '../translations';
@@ -175,10 +176,6 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
     });
     setIsAdding(true);
     setExpandedPlanId(null);
-    // Scroll to form after state updates
-    setTimeout(() => {
-      document.getElementById('plan-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
   };
 
   const handleSavePlan = (e: React.FormEvent) => {
@@ -377,196 +374,200 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
         </button>
       </div>
 
-      {isAdding ? (
-        <form id="plan-form" onSubmit={handleSavePlan} className="flex flex-col bg-white rounded-[2.5rem] border border-slate-100 shadow-sm animate-in zoom-in-95">
-          <div className="p-6 pb-2 flex justify-between items-center shrink-0">
-            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight italic">
+      {isAdding ? createPortal(
+        <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+          <div className="pt-safe px-6 py-4 flex items-center justify-between border-b border-slate-100 shrink-0">
+            <button type="button" onClick={() => setIsAdding(false)} className="p-2 text-slate-400 bg-slate-50 rounded-xl">
+              <X size={24} />
+            </button>
+            <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">
               {editingPlanId ? t.edit_plan : t.add_plan}
             </h3>
-            <button type="button" onClick={() => setIsAdding(false)} className="text-slate-400 p-1">
-              <X size={20} />
-            </button>
+            <div className="w-10"></div>
           </div>
 
-          <div className="p-6 pt-2 space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label htmlFor="plan-title" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.plan_title}</label>
-                <input
-                  id="plan-title"
-                  type="text"
-                  required
-                  placeholder={t.plan_title}
-                  value={newPlan.title}
-                  onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
-                  className="w-full bg-slate-50 p-3 rounded-xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="plan-date" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.date}</label>
-                <input
-                  id="plan-date"
-                  type="date"
-                  required
-                  value={newPlan.date}
-                  onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
-                  className="w-full bg-slate-50 p-3 rounded-xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.exercise}</span>
-                <button
-                  type="button"
-                  onClick={addExerciseToPlan}
-                  disabled={!hasExercises}
-                  className={`text-[10px] font-black uppercase tracking-tight ${hasExercises ? 'text-indigo-600' : 'text-slate-300 cursor-not-allowed'}`}
-                >
-                  + {t.exercise}
-                </button>
-              </div>
-
-              {!hasExercises ? (
-                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-5 text-center space-y-2">
-                  <p className="text-xs font-black text-slate-700 uppercase tracking-widest">{t.no_exercises_plan_title}</p>
-                  <p className="text-[11px] font-bold text-slate-400">{t.no_exercises_plan_hint}</p>
+          <form id="plan-form" onSubmit={handleSavePlan} className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label htmlFor="plan-title" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.plan_title}</label>
+                  <input
+                    id="plan-title"
+                    type="text"
+                    required
+                    placeholder={t.plan_title}
+                    value={newPlan.title}
+                    onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
+                    className="w-full bg-slate-50 p-3 rounded-xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {newPlan.exercises?.map((item: PlanFormExercise, idx: number) => (
-                    <div key={item.id} className="bg-slate-50 p-4 rounded-2xl space-y-3 relative group">
-                      <button
-                        type="button"
-                        onClick={() => removeExerciseFromPlan(idx)}
-                        className="absolute -top-1 -right-1 bg-white p-1.5 rounded-full text-rose-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      >
-                        <X size={12} />
-                      </button>
+                <div className="space-y-1">
+                  <label htmlFor="plan-date" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t.date}</label>
+                  <input
+                    id="plan-date"
+                    type="date"
+                    required
+                    value={newPlan.date}
+                    onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
+                    className="w-full bg-slate-50 p-3 rounded-xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
 
-                      <div className="space-y-1">
-                        <label htmlFor={`exercise-select-${item.id}`} className="sr-only">{t.exercise}</label>
-                        <select
-                          id={`exercise-select-${item.id}`}
-                          value={item.exerciseId}
-                          onChange={e => {
+              <div className="space-y-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.exercise}</span>
+                  <button
+                    type="button"
+                    onClick={addExerciseToPlan}
+                    disabled={!hasExercises}
+                    className={`text-[10px] font-black uppercase tracking-tight ${hasExercises ? 'text-indigo-600' : 'text-slate-300 cursor-not-allowed'}`}
+                  >
+                    + {t.exercise}
+                  </button>
+                </div>
+
+                {!hasExercises ? (
+                  <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-5 text-center space-y-2">
+                    <p className="text-xs font-black text-slate-700 uppercase tracking-widest">{t.no_exercises_plan_title}</p>
+                    <p className="text-[11px] font-bold text-slate-400">{t.no_exercises_plan_hint}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {newPlan.exercises?.map((item: PlanFormExercise, idx: number) => (
+                      <div key={item.id} className="bg-slate-50 p-4 rounded-2xl space-y-3 relative group">
+                        <button
+                          type="button"
+                          onClick={() => removeExerciseFromPlan(idx)}
+                          className="absolute -top-1 -right-1 bg-white p-1.5 rounded-full text-rose-500 shadow-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
+                        >
+                          <X size={12} />
+                        </button>
+
+                        <div className="space-y-1">
+                          <label htmlFor={`exercise-select-${item.id}`} className="sr-only">{t.exercise}</label>
+                          <select
+                            id={`exercise-select-${item.id}`}
+                            value={item.exerciseId}
+                            onChange={e => {
+                              const updated = [...(newPlan.exercises || [])];
+                              updated[idx].exerciseId = e.target.value;
+                              setNewPlan({ ...newPlan, exercises: updated });
+                            }}
+                            className="w-full bg-white p-2.5 rounded-lg border-none text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                          >
+                            {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="space-y-2">
+                          {item.sets.map((group: PlanSetGroup, groupIdx: number) => (
+                            <div key={group.id} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+                              <div className="flex-1 flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  aria-label="Weight"
+                                  value={group.weight || 0}
+                                  onChange={e => {
+                                    const updated = [...(newPlan.exercises || [])];
+                                    updated[idx].sets[groupIdx] = { ...group, weight: parseFloat(e.target.value) || 0 };
+                                    setNewPlan({ ...newPlan, exercises: updated });
+                                  }}
+                                  className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+                                  placeholder="0"
+                                />
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">kg</span>
+                              </div>
+
+                              <div className="flex-1 flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  aria-label="Reps"
+                                  value={group.reps || 0}
+                                  onChange={e => {
+                                    const updated = [...(newPlan.exercises || [])];
+                                    updated[idx].sets[groupIdx] = { ...group, reps: parseInt(e.target.value, 10) || 0 };
+                                    setNewPlan({ ...newPlan, exercises: updated });
+                                  }}
+                                  className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+                                  placeholder="0"
+                                />
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">reps</span>
+                              </div>
+
+                              <div className="w-16 flex items-center gap-1 bg-indigo-50/50 rounded-lg px-2 py-1.5 border border-indigo-100">
+                                <span className="text-[10px] font-black text-indigo-400 italic">×</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  aria-label="Set count"
+                                  value={group.count ?? 1}
+                                  onChange={e => {
+                                    const nextCount = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                    const updated = [...(newPlan.exercises || [])];
+                                    updated[idx].sets[groupIdx] = { ...group, count: nextCount };
+                                    setNewPlan({ ...newPlan, exercises: updated });
+                                  }}
+                                  className="w-full text-center text-sm font-black text-indigo-600 bg-transparent border-none p-0 focus:ring-0"
+                                  placeholder="1"
+                                />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...(newPlan.exercises || [])];
+                                  const sets = [...updated[idx].sets];
+                                  sets.splice(groupIdx, 1);
+                                  updated[idx].sets = sets.length
+                                    ? sets
+                                    : [{ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 }];
+                                  setNewPlan({ ...newPlan, exercises: updated });
+                                }}
+                                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
                             const updated = [...(newPlan.exercises || [])];
-                            updated[idx].exerciseId = e.target.value;
+                            updated[idx].sets.push({ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 });
                             setNewPlan({ ...newPlan, exercises: updated });
                           }}
-                          className="w-full bg-white p-2.5 rounded-lg border-none text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                          className="text-[10px] font-black text-indigo-600 uppercase tracking-tight"
                         >
-                          {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-                        </select>
+                          + {t.add_set}
+                        </button>
                       </div>
-
-                      <div className="space-y-2">
-                        {item.sets.map((group: PlanSetGroup, groupIdx: number) => (
-                          <div key={group.id} className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
-                            <div className="flex-1 flex items-center gap-1">
-                              <input
-                                type="number"
-                                aria-label="Weight"
-                                value={group.weight || 0}
-                                onChange={e => {
-                                  const updated = [...(newPlan.exercises || [])];
-                                  updated[idx].sets[groupIdx] = { ...group, weight: parseFloat(e.target.value) || 0 };
-                                  setNewPlan({ ...newPlan, exercises: updated });
-                                }}
-                                className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
-                                placeholder="0"
-                              />
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">kg</span>
-                            </div>
-
-                            <div className="flex-1 flex items-center gap-1">
-                              <input
-                                type="number"
-                                aria-label="Reps"
-                                value={group.reps || 0}
-                                onChange={e => {
-                                  const updated = [...(newPlan.exercises || [])];
-                                  updated[idx].sets[groupIdx] = { ...group, reps: parseInt(e.target.value, 10) || 0 };
-                                  setNewPlan({ ...newPlan, exercises: updated });
-                                }}
-                                className="w-full text-center text-sm font-black text-slate-900 bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
-                                placeholder="0"
-                              />
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">reps</span>
-                            </div>
-
-                            <div className="w-16 flex items-center gap-1 bg-indigo-50/50 rounded-lg px-2 py-1.5 border border-indigo-100">
-                              <span className="text-[10px] font-black text-indigo-400 italic">×</span>
-                              <input
-                                type="number"
-                                min={1}
-                                aria-label="Set count"
-                                value={group.count ?? 1}
-                                onChange={e => {
-                                  const nextCount = Math.max(1, parseInt(e.target.value, 10) || 1);
-                                  const updated = [...(newPlan.exercises || [])];
-                                  updated[idx].sets[groupIdx] = { ...group, count: nextCount };
-                                  setNewPlan({ ...newPlan, exercises: updated });
-                                }}
-                                className="w-full text-center text-sm font-black text-indigo-600 bg-transparent border-none p-0 focus:ring-0"
-                                placeholder="1"
-                              />
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = [...(newPlan.exercises || [])];
-                                const sets = [...updated[idx].sets];
-                                sets.splice(groupIdx, 1);
-                                updated[idx].sets = sets.length
-                                  ? sets
-                                  : [{ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 }];
-                                setNewPlan({ ...newPlan, exercises: updated });
-                              }}
-                              className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = [...(newPlan.exercises || [])];
-                          updated[idx].sets.push({ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 });
-                          setNewPlan({ ...newPlan, exercises: updated });
-                        }}
-                        className="text-[10px] font-black text-indigo-600 uppercase tracking-tight"
-                      >
-                        + {t.add_set}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="p-6 pt-2 flex gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsAdding(false)}
-              className="flex-1 p-4 bg-slate-100 rounded-2xl font-black text-slate-400 uppercase text-xs active:scale-95 transition-transform"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="submit"
-              className="flex-[2] p-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-transform"
-            >
-              {editingPlanId ? t.update_plan : t.save_plan}
-            </button>
-          </div>
-        </form>
+            <div className="p-6 bg-white/80 backdrop-blur-lg pb-[calc(1.5rem+env(safe-area-inset-bottom))] border-t border-slate-100 flex gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAdding(false)}
+                className="flex-1 p-4 bg-slate-100 rounded-2xl font-black text-slate-400 uppercase text-xs active:scale-95 transition-transform"
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="submit"
+                className="flex-[2] p-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-transform"
+              >
+                {editingPlanId ? t.update_plan : t.save_plan}
+              </button>
+            </div>
+          </form>
+        </div>,
+        document.body
       ) : (
         <div className="space-y-8 -mx-4 px-4 pb-24">
           {groupedPlans.upcoming.length > 0 && (

@@ -278,7 +278,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs,
             <div className="w-10"></div>
           </div>
           
-          <div className="flex-grow overflow-y-auto p-6 space-y-8 pb-32">
+          <div className="flex-grow overflow-y-auto p-6 space-y-8 pb-32" style={{ WebkitOverflowScrolling: 'touch' }}>
              {activePlan ? (
                <div className="space-y-12">
                   {planProgress.map((p, exIdx) => {
