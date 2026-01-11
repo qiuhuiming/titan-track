@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { WorkoutEntry, Exercise, Language, WorkoutPlan, TabType, NavigationParams } from '../types';
 import { translations } from '../translations';
-import { Calendar, ChevronRight, XCircle, ChevronLeft, CheckCircle2, Clock, CircleSlash, Info, Dumbbell, Zap, ArrowRight } from 'lucide-react';
+import { Calendar, ChevronRight, XCircle, ChevronLeft, CheckCircle2, Dumbbell, Zap, ArrowRight } from 'lucide-react';
 
 interface DashboardProps {
   logs: WorkoutEntry[];
@@ -179,30 +179,52 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
             let textColor = 'text-slate-900';
             let borderStyle = 'border-transparent';
             let shadow = '';
+            let showCheckmark = false;
+            let showMissedIcon = false;
 
             if (d.currentMonth) {
-              if (d.isPast) {
-                bgColor = 'bg-slate-50/50';
-                textColor = 'text-slate-400';
+              if (d.isCompleted) {
+                bgColor = 'bg-emerald-50';
+                textColor = 'text-emerald-700';
+                borderStyle = 'border-emerald-200';
+                shadow = 'shadow-sm';
+                if (d.isToday) {
+                  borderStyle = 'border-emerald-500 ring-4 ring-emerald-100';
+                  shadow = 'shadow-md shadow-emerald-100';
+                }
+                showCheckmark = true;
+              } else if (d.isPlanned) {
+                if (d.isMissed) {
+                  bgColor = 'bg-rose-50';
+                  textColor = 'text-rose-600';
+                  borderStyle = 'border-rose-200';
+                  shadow = 'shadow-sm';
+                  showMissedIcon = true;
+                } else {
+                  bgColor = 'bg-indigo-50';
+                  textColor = 'text-indigo-700';
+                  borderStyle = 'border-indigo-200';
+                  shadow = 'shadow-sm shadow-indigo-50';
+                  if (d.isToday) {
+                    borderStyle = 'border-indigo-500 ring-4 ring-indigo-100';
+                    shadow = 'shadow-md shadow-indigo-100';
+                  }
+                }
               } else if (d.isToday) {
                 bgColor = 'bg-white';
-                borderStyle = 'border-indigo-600 ring-4 ring-indigo-50';
+                borderStyle = 'border-indigo-400 ring-4 ring-indigo-50';
                 textColor = 'text-indigo-600';
-                shadow = 'shadow-md';
-              } else if (d.isFuture) {
+                shadow = 'shadow-md shadow-indigo-50';
+              } else if (d.isPast) {
+                bgColor = 'bg-slate-50/30';
+                textColor = 'text-slate-400';
+              } else {
                 bgColor = 'bg-white';
-                textColor = 'text-slate-600';
+                textColor = 'text-slate-500';
                 borderStyle = 'border-slate-100';
               }
-              
-              if (d.isPlanned) {
-                bgColor = 'bg-indigo-600';
-                textColor = 'text-white';
-                borderStyle = 'border-indigo-500';
-                shadow = 'shadow-lg shadow-indigo-200';
-              }
             } else {
-              textColor = 'text-slate-200 opacity-20';
+              textColor = 'text-slate-300 opacity-30';
               bgColor = 'bg-transparent';
             }
 
@@ -227,35 +249,22 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
                   d.isPlanned ? 'scale-105 z-10 hover:scale-110 cursor-pointer' : 'hover:bg-slate-100/50'
                 }`}
               >
-                <span className={`text-[10px] sm:text-xs font-black ${d.isToday && !d.isPlanned ? 'underline decoration-2 underline-offset-2' : ''}`}>
+                <span className={`text-[10px] sm:text-xs font-black ${d.isToday && !d.isCompleted && !d.isPlanned ? 'underline decoration-2 underline-offset-2' : ''}`}>
                   {d.day}
                 </span>
-                
-                {d.isCompleted && (
-                  <div className={`absolute bottom-1 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${d.isPlanned ? 'bg-white' : 'bg-emerald-500'}`} />
+
+                {showCheckmark && (
+                  <CheckCircle2 size={10} className={`absolute bottom-1 sm:bottom-1.5 ${d.isCompleted && d.isPlanned ? 'text-emerald-600' : 'text-emerald-500'}`} strokeWidth={3} />
                 )}
-                
-                {d.isMissed && !d.isCompleted && (
-                  <XCircle size={10} className="text-rose-400 absolute bottom-1 sm:bottom-1.5" strokeWidth={3} />
+
+                {showMissedIcon && (
+                  <XCircle size={10} className="text-rose-500 absolute bottom-1 sm:bottom-1.5" strokeWidth={3} />
                 )}
               </button>
             );
           })}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 flex flex-wrap justify-center gap-3 relative z-10">
-          {[
-            { label: language === 'zh' ? '已完成' : 'Completed', color: 'bg-emerald-500', icon: CheckCircle2 },
-            { label: language === 'zh' ? '计划中' : 'Planned', color: 'bg-indigo-600', icon: Clock },
-            { label: language === 'zh' ? '未达标' : 'Missed', color: 'bg-rose-400', icon: CircleSlash },
-            { label: language === 'zh' ? '休息日' : 'Rest', color: 'bg-slate-100', icon: Info },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-              <div className={`w-2 h-2 rounded-full ${item.color}`} />
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{item.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {previewDay && (
