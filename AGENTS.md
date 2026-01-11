@@ -184,6 +184,86 @@ Use `bun run <script>`:
 - Console.error for debugging
 - Graceful fallbacks (initial data, error messages)
 
+# Documentation for AI Agents
+
+A comprehensive documentation suite is available in `docs/` directory to guide AI agent work:
+
+## Documentation Index
+
+### Essential Context (Read First)
+- **docs/ARCHITECTURE.md** (~150 lines)
+  - System overview, tech stack, component tree, data flow
+  - Key architectural decisions (prop drilling, file-based storage, mobile-first)
+  - **Always read first** for any task to understand context
+
+### Domain-Specific References
+- **docs/STATE_MANAGEMENT.md** (~150 lines)
+  - Global state patterns (App.tsx), update callbacks, loading states
+  - Language state management, anti-patterns to avoid
+  - **Read for:** State changes, global data updates
+
+- **docs/COMPONENT_GUIDE.md** (~180 lines)
+  - Component patterns, props interfaces, styling patterns
+  - Button types, form inputs, responsive design, animations
+  - **Read for:** Adding/editing components, UI changes
+
+- **docs/TAURI_BACKEND.md** (~120 lines)
+  - Rust storage architecture, thread safety, adding new commands
+  - TypeScript ↔ Rust type mapping, error handling patterns
+  - **Read for:** Backend changes, Tauri integration
+
+- **docs/UI_PATTERNS.md** (~150 lines)
+  - Design system (colors, typography, shapes), reusable patterns
+  - Modal patterns, animations, responsive design, accessibility
+  - **Read for:** Frontend UI work, styling changes
+
+- **docs/DATA_MODELS.md** (~80 lines)
+  - TypeScript interfaces and Rust structs
+  - Muscle groups, RPE scale, set grouping pattern
+  - **Read for:** Quick type reference, data structure questions
+
+### Workflow Guidance
+- **docs/TASK_WORKFLOWS.md** (~100 lines)
+  - Step-by-step guides for common tasks (add feature, fix bug, refactor)
+  - Diagnostics commands, git workflow, agent-specific reading strategies
+  - **Read for:** "How to start" questions, task execution guidance
+
+## Agent Reading Strategy
+
+### Small Context Window (<32k tokens)
+1. **ALWAYS read:** `docs/ARCHITECTURE.md` (context foundation)
+2. **THEN read:** 1 domain-specific doc relevant to task
+3. **OPTIONAL:** Quick reference from `DATA_MODELS.md` if needed
+4. **SKIP:** Other docs until specifically needed
+
+### Large Context Window (>64k tokens)
+1. **ALWAYS read:** `docs/ARCHITECTURE.md` (context foundation)
+2. **THEN read:** 2-3 domain-specific docs based on task type
+3. **REFERENCE:** `TASK_WORKFLOWS.md` for workflow guidance
+4. **BOOKMARK:** Other docs for future reference
+
+### Agent-Specific Mapping
+
+| Agent Type | Read First | Then Read | Skip |
+|-------------|-------------|------------|-------|
+| **Frontend/UI** | ARCHITECTURE.md | COMPONENT_GUIDE.md | TAURI_BACKEND |
+| **State Changes** | STATE_MANAGEMENT.md | ARCHITECTURE.md | UI_PATTERNS |
+| **Backend/Rust** | ARCHITECTURE.md | TAURI_BACKEND.md | COMPONENT_GUIDE, UI_PATTERNS |
+| **Bug Fixes** | ARCHITECTURE.md → [Component/Backend] | TASK_WORKFLOWS.md | - |
+| **New Features** | ARCHITECTURE.md → [Domain doc] | TASK_WORKFLOWS.md | - |
+
+## Context Window Considerations
+
+**Total Documentation Size:** ~830 lines across 7 files
+
+The documentation is designed to fit within context windows while providing:
+- ✅ **Efficient**: Agents only read relevant docs
+- ✅ **Context-aware**: Essential docs prioritized
+- ✅ **Domain-separated**: Backend agents skip UI docs, frontend agents skip backend docs
+- ✅ **Maintainable**: Clear ownership, no redundancy between docs
+
+---
+
 # Guidelines
 - Do not commit `.env` or secrets.
 - Keep frontend and backend concerns separated by directory.
