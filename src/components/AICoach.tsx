@@ -66,8 +66,10 @@ const AICoach: React.FC<AICoachProps> = ({ logs, exercises, language }) => {
           <p className="text-slate-500 mb-6 text-sm">{t.ask_desc}</p>
           
           <form onSubmit={handleChat} className="mt-auto relative">
-            <input 
-              type="text" 
+            <input
+              id="ai-coach-query"
+              type="text"
+              aria-label="Ask AI Coach"
               placeholder={t.ask_anything}
               value={query}
               onChange={e => setQuery(e.target.value)}

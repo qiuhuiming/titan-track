@@ -175,6 +175,10 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
     });
     setIsAdding(true);
     setExpandedPlanId(null);
+    // Scroll to form after state updates
+    setTimeout(() => {
+      document.getElementById('plan-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleSavePlan = (e: React.FormEvent) => {
@@ -374,7 +378,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
       </div>
 
       {isAdding ? (
-        <form onSubmit={handleSavePlan} className="flex flex-col bg-white rounded-[2.5rem] border border-slate-100 shadow-sm animate-in zoom-in-95">
+        <form id="plan-form" onSubmit={handleSavePlan} className="flex flex-col bg-white rounded-[2.5rem] border border-slate-100 shadow-sm animate-in zoom-in-95">
           <div className="p-6 pb-2 flex justify-between items-center shrink-0">
             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight italic">
               {editingPlanId ? t.edit_plan : t.add_plan}

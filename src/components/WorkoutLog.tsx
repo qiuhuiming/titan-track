@@ -334,38 +334,42 @@ const WorkoutLog: FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs,
                                <div className="grid grid-cols-3 gap-3">
                                  <div className="bg-white p-3 rounded-2xl text-center shadow-sm">
                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">KG</p>
-                                   <input 
-                                     type="number" 
-                                     value={set.weight} 
+                                   <input
+                                     type="number"
+                                     aria-label="Weight in kg"
+                                     value={set.weight}
                                      onChange={e => updatePlanSet(exIdx, setIdx, 'weight', parseFloat(e.target.value))}
-                                     className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
+                                     className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg"
                                    />
                                  </div>
                                  <div className="bg-white p-3 rounded-2xl text-center shadow-sm">
                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Reps</p>
-                                    <input 
-                                      type="number" 
-                                      value={set.reps} 
+                                    <input
+                                      type="number"
+                                      aria-label="Reps"
+                                      value={set.reps}
                                       onChange={e => updatePlanSet(exIdx, setIdx, 'reps', parseInt(e.target.value, 10))}
-                                      className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
+                                      className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg"
                                     />
                                  </div>
                                  <div className="bg-white p-3 rounded-2xl text-center shadow-sm">
                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">RPE</p>
-                                    <input 
-                                      type="number" 
-                                      value={set.rpe} 
+                                    <input
+                                      type="number"
+                                      aria-label="RPE"
+                                      value={set.rpe}
                                       onChange={e => updatePlanSet(exIdx, setIdx, 'rpe', parseInt(e.target.value, 10))}
-                                      className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg" 
+                                      className="w-full text-center font-black text-slate-900 bg-transparent outline-none text-lg"
                                     />
                                  </div>
                                </div>
-                               <input 
-                                 type="text" 
+                               <input
+                                 type="text"
+                                 aria-label="Notes"
                                  placeholder={t.notes}
                                  value={set.notes}
                                  onChange={e => updatePlanSet(exIdx, setIdx, 'notes', e.target.value)}
-                                 className="w-full mt-4 bg-white p-3 rounded-2xl text-xs font-bold text-slate-600 outline-none border border-slate-100 shadow-sm" 
+                                 className="w-full mt-4 bg-white p-3 rounded-2xl text-xs font-bold text-slate-600 outline-none border border-slate-100 shadow-sm"
                                />
                              </div>
                            ))}
@@ -450,7 +454,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs,
                             <div className="flex-1 grid grid-cols-3 gap-2">
                               <div className="bg-white p-2 rounded-xl text-center shadow-sm">
                                 <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">KG</p>
-                                <input type="number" placeholder="KG" value={set.weight || ''} onChange={e => {
+                                <input type="number" aria-label="Weight in kg" placeholder="KG" value={set.weight || ''} onChange={e => {
                                    const updated = [...formData.sets];
                                    updated[i].weight = parseFloat(e.target.value);
                                    setFormData({...formData, sets: updated});
@@ -458,7 +462,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs,
                               </div>
                               <div className="bg-white p-2 rounded-xl text-center shadow-sm">
                                 <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Reps</p>
-                              <input type="number" placeholder="REPS" value={set.reps || ''} onChange={e => {
+                              <input type="number" aria-label="Reps" placeholder="REPS" value={set.reps || ''} onChange={e => {
                                  const updated = [...formData.sets];
                                  updated[i].reps = parseInt(e.target.value, 10);
                                  setFormData({...formData, sets: updated});
@@ -466,7 +470,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({ logs, exercises, plans, onUpdateLogs,
                               </div>
                               <div className="bg-white p-2 rounded-xl text-center shadow-sm">
                                 <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">RPE</p>
-                              <input type="number" placeholder="RPE" value={set.rpe || ''} onChange={e => {
+                              <input type="number" aria-label="RPE" placeholder="RPE" value={set.rpe || ''} onChange={e => {
                                  const updated = [...formData.sets];
                                  updated[i].rpe = parseInt(e.target.value, 10);
                                  setFormData({...formData, sets: updated});

@@ -171,8 +171,8 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
         </div>
 
         <div className="grid grid-cols-7 gap-1.5 sm:gap-3 relative z-10">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-            <div key={`day-header-${d}`} className="text-center text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">{d}</div>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, index) => (
+            <div key={`day-header-${index}`} className="text-center text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">{d}</div>
           ))}
           {calendarDays.map((d, i) => {
             let bgColor = 'bg-slate-50';
