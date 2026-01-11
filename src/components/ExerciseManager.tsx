@@ -62,7 +62,7 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
   const handleAdd = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const ex: Exercise = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       ...newExercise,
     }
     onUpdateExercises([...exercises, ex])
@@ -85,7 +85,9 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
         </div>
         <button
           type="button"
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => {
+            setIsAdding(!isAdding)
+          }}
           className="flex items-center justify-center space-x-2 rounded-xl bg-indigo-600 px-5 py-2.5 font-bold text-white shadow-md shadow-indigo-100 transition-all hover:bg-indigo-700"
         >
           <Plus size={20} />
@@ -187,7 +189,9 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setIsAdding(false)}
+                onClick={() => {
+                  setIsAdding(false)
+                }}
                 className="flex-1 rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-600 transition-colors hover:bg-slate-200"
               >
                 {t.cancel}
@@ -219,7 +223,9 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteExercise(ex.id)}
+                  onClick={() => {
+                    deleteExercise(ex.id)
+                  }}
                   className="p-2 text-slate-400 hover:text-rose-600"
                 >
                   <Trash2 size={16} />

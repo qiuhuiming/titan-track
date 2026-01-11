@@ -60,10 +60,10 @@ const App: FC = () => {
       }
     }
 
-    loadData()
+    void loadData()
 
-    const savedLang = localStorage.getItem('titan_track_lang') as Language
-    if (savedLang) setLanguage(savedLang)
+    const savedLang = localStorage.getItem('titan_track_lang')
+    if (savedLang === 'zh' || savedLang === 'en') setLanguage(savedLang)
   }, [])
 
   useEffect(() => {
@@ -133,35 +133,29 @@ const App: FC = () => {
     }
   }
 
-  const handleUpdateExercises = async (newExercises: Exercise[]) => {
+  const handleUpdateExercises = (newExercises: Exercise[]) => {
     setExercises(newExercises)
-    try {
-      await tauriStorageService.saveExercises(newExercises)
-    } catch (error) {
+    tauriStorageService.saveExercises(newExercises).catch((error: unknown) => {
       console.error('Failed to save exercises:', error)
-    }
+    })
   }
 
   const handleCloseExerciseManager = () => {
     setIsExerciseManagerOpen(false)
   }
 
-  const handleUpdateLogs = async (newLogs: WorkoutEntry[]) => {
+  const handleUpdateLogs = (newLogs: WorkoutEntry[]) => {
     setLogs(newLogs)
-    try {
-      await tauriStorageService.saveLogs(newLogs)
-    } catch (error) {
+    tauriStorageService.saveLogs(newLogs).catch((error: unknown) => {
       console.error('Failed to save logs:', error)
-    }
+    })
   }
 
-  const handleUpdatePlans = async (newPlans: WorkoutPlan[]) => {
+  const handleUpdatePlans = (newPlans: WorkoutPlan[]) => {
     setPlans(newPlans)
-    try {
-      await tauriStorageService.savePlans(newPlans)
-    } catch (error) {
+    tauriStorageService.savePlans(newPlans).catch((error: unknown) => {
       console.error('Failed to save plans:', error)
-    }
+    })
   }
 
   const navigateToTab = (tab: TabType, params: NavigationParams | null = null) => {
@@ -204,7 +198,9 @@ const App: FC = () => {
             <button
               key={tab.id}
               type="button"
-              onClick={() => navigateToTab(tab.id)}
+              onClick={() => {
+                navigateToTab(tab.id)
+              }}
               className={`flex w-full items-center space-x-3 rounded-xl px-4 py-3 transition-all duration-200 ${
                 activeTab === tab.id
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
@@ -249,7 +245,9 @@ const App: FC = () => {
           <div ref={settingsRef} className="relative">
             <button
               type="button"
-              onClick={() => setIsSettingsOpen((prev) => !prev)}
+              onClick={() => {
+                setIsSettingsOpen((prev) => !prev)
+              }}
               className="p-2 text-slate-400 transition-colors hover:text-slate-600"
               aria-haspopup="true"
               aria-expanded={isSettingsOpen}
@@ -276,7 +274,9 @@ const App: FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleClearAllData}
+                  onClick={() => {
+                    void handleClearAllData()
+                  }}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-rose-600 transition-all hover:bg-rose-50"
                 >
                   {t.clear_all_data}
@@ -362,7 +362,9 @@ const App: FC = () => {
           <button
             key={tab.id}
             type="button"
-            onClick={() => navigateToTab(tab.id)}
+            onClick={() => {
+              navigateToTab(tab.id)
+            }}
             disabled={isExerciseManagerOpen}
             aria-disabled={isExerciseManagerOpen}
             className={`relative flex flex-col items-center space-y-1 transition-colors duration-300 ${

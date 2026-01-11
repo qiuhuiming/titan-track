@@ -12,12 +12,12 @@ const isTauri = () => {
 
 const getLocalStorageItem = <T>(key: string, fallback: T): T => {
   const data = localStorage.getItem(key)
-  return data ? JSON.parse(data) : fallback
+  return data ? (JSON.parse(data) as T) : fallback
 }
 
 const getOrInitLocalStorage = <T>(key: string, initial: T): T => {
   const data = localStorage.getItem(key)
-  if (data) return JSON.parse(data)
+  if (data) return JSON.parse(data) as T
   localStorage.setItem(key, JSON.stringify(initial))
   return initial
 }

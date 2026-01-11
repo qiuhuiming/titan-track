@@ -55,8 +55,11 @@ const PlanManager: React.FC<PlanManagerProps> = ({
   useEffect(() => {
     if (initialParams?.date) {
       const planToExpand = plans.find((p) => p.date === initialParams.date)
-      if (planToExpand) {
-        setExpandedPlanId(planToExpand.id)
+      if (planToExpand && expandedPlanId !== planToExpand.id) {
+        // Using queueMicrotask to batch the update after render
+        queueMicrotask(() => {
+          setExpandedPlanId(planToExpand.id)
+        })
         setTimeout(() => {
           const element = document.getElementById(`plan-${planToExpand.id}`)
           if (element) {
@@ -65,7 +68,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
         }, 100)
       }
     }
-  }, [initialParams, plans])
+  }, [initialParams, plans, expandedPlanId])
 
   // Close modal on ESC key
   useEffect(() => {
@@ -73,7 +76,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
       if (e.key === 'Escape' && isAdding) setIsAdding(false)
     }
     document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('keydown', handleEsc)
+    }
   }, [isAdding])
 
   // Disable background scroll when modal is open
@@ -140,10 +145,13 @@ const PlanManager: React.FC<PlanManagerProps> = ({
 
   useEffect(() => {
     const maxUpcoming = Math.max(1, Math.ceil(groupedPlans.upcoming.length / PLANS_PER_PAGE))
-    if (incompletePage > maxUpcoming) setIncompletePage(maxUpcoming)
-
     const maxPast = Math.max(1, Math.ceil(groupedPlans.past.length / PLANS_PER_PAGE))
-    if (pastPage > maxPast) setPastPage(maxPast)
+
+    // Batch updates to avoid cascading renders
+    queueMicrotask(() => {
+      if (incompletePage > maxUpcoming) setIncompletePage(maxUpcoming)
+      if (pastPage > maxPast) setPastPage(maxPast)
+    })
   }, [groupedPlans.upcoming.length, groupedPlans.past.length, incompletePage, pastPage])
 
   const isSameSetGroup = (a: WorkoutSet, b: WorkoutSet) =>
@@ -155,7 +163,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
 
   const groupSets = (sets: WorkoutSet[]): PlanSetGroup[] =>
     sets.reduce<PlanSetGroup[]>((acc, set) => {
-      const last = acc[acc.length - 1]
+      const last = acc.at(-1)
       if (last && isSameSetGroup(last, set)) {
         last.count = (last.count ?? 1) + 1
         return acc
@@ -191,7 +199,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
       title: plan.title,
       tags: plan.tags,
       exercises: plan.exercises.map((exercise, index) => ({
-        id: `edit-${plan.id}-${exercise.exerciseId}-${index}`,
+        id: `edit-${plan.id}-${exercise.exerciseId}-${String(index)}`,
         exerciseId: exercise.exerciseId,
         sets: groupSets(exercise.sets),
       })),
@@ -251,7 +259,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
       exercises: [
         ...(newPlan.exercises || []),
         {
-          id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          id: `new-${String(Date.now())}-${Math.random().toString(36).slice(2, 6)}`,
           exerciseId: exercises[0]?.id || '',
           sets: [{ id: Math.random().toString(36).slice(2, 9), weight: 0, reps: 0, count: 1 }],
         },
@@ -284,9 +292,11 @@ const PlanManager: React.FC<PlanManagerProps> = ({
       <div className="mt-6 mb-2 flex justify-center gap-2">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
           <button
-            key={`page-${colorScheme}-${page}`}
+            key={`page-${colorScheme}-${String(page)}`}
             type="button"
-            onClick={() => setPage(page)}
+            onClick={() => {
+              setPage(page)
+            }}
             className={`h-9 w-9 rounded-xl text-xs font-black shadow-sm transition-all active:scale-90 ${
               currentPage === page
                 ? colorScheme === 'indigo'
@@ -313,7 +323,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
       <button
         type="button"
         className="flex w-full cursor-pointer items-center justify-between p-5 text-left active:bg-slate-50"
-        onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
+        onClick={() => {
+          setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)
+        }}
       >
         <div className="flex items-center gap-4">
           <div
@@ -355,7 +367,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
               const ex = exercises.find((e) => e.id === item.exerciseId)
               return (
                 <div
-                  key={`plan-ex-${plan.id}-${item.exerciseId}-${exerciseIndex}`}
+                  key={`plan-ex-${plan.id}-${item.exerciseId}-${String(exerciseIndex)}`}
                   className="rounded-2xl bg-slate-50 p-4"
                 >
                   <div className="mb-2 flex justify-between">
@@ -367,7 +379,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                   <div className="grid grid-cols-2 gap-2">
                     {item.sets.map((set, setIndex) => (
                       <div
-                        key={set.id || `set-${plan.id}-${exerciseIndex}-${setIndex}`}
+                        key={set.id}
                         className="rounded-lg border border-slate-100 bg-white p-2 text-[10px] text-slate-500"
                       >
                         Set {setIndex + 1}:{' '}
@@ -430,7 +442,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
             <div className="pt-safe flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
               <button
                 type="button"
-                onClick={() => setIsAdding(false)}
+                onClick={() => {
+                  setIsAdding(false)
+                }}
                 className="rounded-xl bg-slate-50 p-2 text-slate-400"
               >
                 <X size={24} />
@@ -460,7 +474,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                       required
                       placeholder={t.plan_title}
                       value={newPlan.title}
-                      onChange={(e) => setNewPlan({ ...newPlan, title: e.target.value })}
+                      onChange={(e) => {
+                        setNewPlan({ ...newPlan, title: e.target.value })
+                      }}
                       className="w-full rounded-xl border-none bg-slate-50 p-3 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -476,7 +492,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                       type="date"
                       required
                       value={newPlan.date}
-                      onChange={(e) => setNewPlan({ ...newPlan, date: e.target.value })}
+                      onChange={(e) => {
+                        setNewPlan({ ...newPlan, date: e.target.value })
+                      }}
                       className="w-full rounded-xl border-none bg-slate-50 p-3 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -515,7 +533,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                         >
                           <button
                             type="button"
-                            onClick={() => removeExerciseFromPlan(idx)}
+                            onClick={() => {
+                              removeExerciseFromPlan(idx)
+                            }}
                             className="absolute -top-1 -right-1 z-10 rounded-full bg-white p-1.5 text-rose-500 opacity-100 shadow-sm transition-opacity md:opacity-0 md:group-hover:opacity-100"
                           >
                             <X size={12} />
@@ -666,7 +686,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
               <div className="flex shrink-0 gap-3 border-t border-slate-100 bg-white/80 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] backdrop-blur-lg">
                 <button
                   type="button"
-                  onClick={() => setIsAdding(false)}
+                  onClick={() => {
+                    setIsAdding(false)
+                  }}
                   className="flex-1 rounded-2xl bg-slate-100 p-4 text-xs font-black text-slate-400 uppercase transition-transform active:scale-95"
                 >
                   {t.cancel}
@@ -688,7 +710,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
             <div className="space-y-4">
               <button
                 type="button"
-                onClick={() => setIsUpcomingExpanded(!isUpcomingExpanded)}
+                onClick={() => {
+                  setIsUpcomingExpanded(!isUpcomingExpanded)
+                }}
                 className="sticky top-0 z-20 ml-1 flex w-full items-center gap-2 bg-slate-50/80 py-2 text-left text-indigo-600 backdrop-blur-sm transition-opacity hover:opacity-80"
                 aria-expanded={isUpcomingExpanded}
               >
@@ -722,7 +746,9 @@ const PlanManager: React.FC<PlanManagerProps> = ({
             <div className="space-y-4">
               <button
                 type="button"
-                onClick={() => setIsPastExpanded(!isPastExpanded)}
+                onClick={() => {
+                  setIsPastExpanded(!isPastExpanded)
+                }}
                 className="sticky top-0 z-20 ml-1 flex w-full items-center gap-2 bg-slate-50/80 py-2 text-left text-slate-400 backdrop-blur-sm transition-opacity hover:opacity-80"
                 aria-expanded={isPastExpanded}
               >

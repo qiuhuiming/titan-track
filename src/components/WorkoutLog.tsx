@@ -48,7 +48,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
   const hasExercises = exercises.length > 0
 
   // Find the next nearest incomplete plan
-  const upcomingPlan = useMemo(() => {
+  const upcomingPlan = useMemo((): WorkoutPlan | null => {
     const incompletePlans = plans
       .filter((p) => !p.isCompleted)
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -62,7 +62,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
     if (futurePlan) return futurePlan
 
     // If no future plans, find the most recent missed one
-    return incompletePlans[incompletePlans.length - 1] || null
+    return incompletePlans[incompletePlans.length - 1] ?? null
   }, [plans, todayStr])
 
   const startLoggingPlan = (plan: WorkoutPlan, forceToday: boolean = false) => {
@@ -159,7 +159,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
     const logsToSave: WorkoutEntry[] = planProgress
       .filter((p) => !p.skipped)
       .map((p) => ({
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 11),
         date: activePlan.date,
         exerciseId: p.exerciseId,
         workoutType: activePlan.title,
@@ -185,7 +185,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const newEntry: WorkoutEntry = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       ...formData,
     }
     onUpdateLogs([...logs, newEntry])
@@ -235,7 +235,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <button
                       type="button"
-                      onClick={() => startLoggingPlan(upcomingPlan, upcomingPlan.date !== todayStr)}
+                      onClick={() => {
+                        startLoggingPlan(upcomingPlan, upcomingPlan.date !== todayStr)
+                      }}
                       disabled={!hasExercises}
                       className={`flex flex-1 items-center justify-center gap-3 rounded-2xl px-6 py-4 font-black shadow-lg transition-all active:scale-95 ${hasExercises ? 'bg-indigo-600 text-white shadow-indigo-900/20 hover:bg-indigo-500' : 'cursor-not-allowed bg-slate-700/40 text-slate-300 shadow-none'}`}
                     >
@@ -246,7 +248,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsAdding(true)}
+                      onClick={() => {
+                        setIsAdding(true)
+                      }}
                       disabled={!hasExercises}
                       className={`flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-black backdrop-blur-sm transition-all ${hasExercises ? 'bg-white/10 text-white hover:bg-white/20' : 'cursor-not-allowed bg-white/5 text-slate-400'}`}
                     >
@@ -262,7 +266,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                   </p>
                   <button
                     type="button"
-                    onClick={() => setIsAdding(true)}
+                    onClick={() => {
+                      setIsAdding(true)
+                    }}
                     disabled={!hasExercises}
                     className={`w-full rounded-2xl px-10 py-4 text-sm font-black tracking-widest uppercase shadow-lg transition-transform active:scale-95 ${hasExercises ? 'bg-white text-slate-900' : 'cursor-not-allowed bg-slate-700/40 text-slate-300 shadow-none'}`}
                   >
@@ -364,7 +370,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => toggleSkipExercise(exIdx)}
+                              onClick={() => {
+                                toggleSkipExercise(exIdx)
+                              }}
                               className={`rounded-xl border p-2 transition-all ${p.skipped ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-400'}`}
                               title={t.skip_exercise}
                             >
@@ -373,7 +381,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                             {!p.skipped && (
                               <button
                                 type="button"
-                                onClick={() => completeAllSets(exIdx)}
+                                onClick={() => {
+                                  completeAllSets(exIdx)
+                                }}
                                 className={`rounded-xl border p-2 transition-all ${allDone ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-emerald-200 bg-white text-emerald-500'}`}
                                 title={t.complete_all}
                               >
@@ -387,7 +397,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                           <div className="space-y-3">
                             {p.sets.map((set, setIdx) => (
                               <div
-                                key={set.id || `${p.exerciseId}-${setIdx}`}
+                                key={set.id}
                                 className={`rounded-[2rem] border-2 bg-slate-50 p-5 transition-all ${set.completed ? 'border-emerald-500 bg-emerald-50/20 opacity-60' : 'border-transparent'}`}
                               >
                                 <div className="mb-4 flex items-center justify-between px-1">
@@ -396,9 +406,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() =>
+                                    onClick={() => {
                                       updatePlanSet(exIdx, setIdx, 'completed', !set.completed)
-                                    }
+                                    }}
                                     className={`rounded-xl px-4 py-2 text-[9px] font-black uppercase transition-all ${set.completed ? 'bg-emerald-500 text-white shadow-md shadow-emerald-100' : 'border border-slate-200 bg-white text-slate-400 hover:border-indigo-300'}`}
                                   >
                                     {set.completed ? t.status_completed : t.status_incomplete}
@@ -413,14 +423,14 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                       type="number"
                                       aria-label="Weight in kg"
                                       value={set.weight}
-                                      onChange={(e) =>
+                                      onChange={(e) => {
                                         updatePlanSet(
                                           exIdx,
                                           setIdx,
                                           'weight',
                                           parseFloat(e.target.value)
                                         )
-                                      }
+                                      }}
                                       className="w-full bg-transparent text-center text-lg font-black text-slate-900 outline-none"
                                     />
                                   </div>
@@ -432,14 +442,14 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                       type="number"
                                       aria-label="Reps"
                                       value={set.reps}
-                                      onChange={(e) =>
+                                      onChange={(e) => {
                                         updatePlanSet(
                                           exIdx,
                                           setIdx,
                                           'reps',
                                           parseInt(e.target.value, 10)
                                         )
-                                      }
+                                      }}
                                       className="w-full bg-transparent text-center text-lg font-black text-slate-900 outline-none"
                                     />
                                   </div>
@@ -451,14 +461,14 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                       type="number"
                                       aria-label="RPE"
                                       value={set.rpe}
-                                      onChange={(e) =>
+                                      onChange={(e) => {
                                         updatePlanSet(
                                           exIdx,
                                           setIdx,
                                           'rpe',
                                           parseInt(e.target.value, 10)
                                         )
-                                      }
+                                      }}
                                       className="w-full bg-transparent text-center text-lg font-black text-slate-900 outline-none"
                                     />
                                   </div>
@@ -468,9 +478,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                   aria-label="Notes"
                                   placeholder={t.notes}
                                   value={set.notes}
-                                  onChange={(e) =>
+                                  onChange={(e) => {
                                     updatePlanSet(exIdx, setIdx, 'notes', e.target.value)
-                                  }
+                                  }}
                                   className="mt-4 w-full rounded-2xl border border-slate-100 bg-white p-3 text-xs font-bold text-slate-600 shadow-sm outline-none"
                                 />
                               </div>
@@ -485,7 +495,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                             </p>
                             <button
                               type="button"
-                              onClick={() => toggleSkipExercise(exIdx)}
+                              onClick={() => {
+                                toggleSkipExercise(exIdx)
+                              }}
                               className="mt-2 text-[10px] font-bold text-indigo-600 underline"
                             >
                               Undo Skip
@@ -518,7 +530,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                           id={formDateId}
                           type="date"
                           value={formData.date}
-                          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, date: e.target.value })
+                          }}
                           className="w-full rounded-2xl border-none bg-slate-50 p-4 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
@@ -534,9 +548,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                           type="text"
                           placeholder={t.type}
                           value={formData.workoutType}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setFormData({ ...formData, workoutType: e.target.value })
-                          }
+                          }}
                           className="w-full rounded-2xl border-none bg-slate-50 p-4 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
@@ -552,7 +566,9 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                       <select
                         id={formExerciseId}
                         value={formData.exerciseId}
-                        onChange={(e) => setFormData({ ...formData, exerciseId: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, exerciseId: e.target.value })
+                        }}
                         className="w-full appearance-none rounded-2xl border-none bg-slate-50 p-4 font-bold text-slate-900 shadow-sm focus:ring-2 focus:ring-indigo-500"
                       >
                         {exercises.map((ex) => (
@@ -571,7 +587,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                       </h4>
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
                           setFormData({
                             ...formData,
                             sets: [
@@ -585,7 +601,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                               },
                             ],
                           })
-                        }
+                        }}
                         className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-600"
                       >
                         + {t.add_set.toUpperCase()}
@@ -655,12 +671,12 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                           </div>
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={() => {
                               setFormData({
                                 ...formData,
                                 sets: formData.sets.filter((s) => s.id !== set.id),
                               })
-                            }
+                            }}
                             className="rounded-xl p-2 text-rose-500 transition-colors hover:bg-rose-50"
                           >
                             <Trash2 size={18} />

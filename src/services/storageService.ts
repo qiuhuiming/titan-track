@@ -10,7 +10,7 @@ const STORAGE_KEYS = {
 export const storageService = {
   getExercises: (): Exercise[] => {
     const data = localStorage.getItem(STORAGE_KEYS.EXERCISES)
-    if (data) return JSON.parse(data)
+    if (data) return JSON.parse(data) as Exercise[]
     localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(INITIAL_EXERCISES))
     return INITIAL_EXERCISES
   },
@@ -19,14 +19,14 @@ export const storageService = {
   },
   getLogs: (): WorkoutEntry[] => {
     const data = localStorage.getItem(STORAGE_KEYS.LOGS)
-    return data ? JSON.parse(data) : []
+    return data ? (JSON.parse(data) as WorkoutEntry[]) : []
   },
   saveLogs: (logs: WorkoutEntry[]) => {
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs))
   },
   getPlans: (): WorkoutPlan[] => {
     const data = localStorage.getItem(STORAGE_KEYS.PLANS)
-    return data ? JSON.parse(data) : []
+    return data ? (JSON.parse(data) as WorkoutPlan[]) : []
   },
   savePlans: (plans: WorkoutPlan[]) => {
     localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(plans))

@@ -66,7 +66,7 @@ export const geminiService = {
   ): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' })
 
-    const summary = `Total workouts: ${logs.length}. Common exercises: ${exercises
+    const summary = `Total workouts: ${String(logs.length)}. Common exercises: ${exercises
       .slice(0, 3)
       .map((e) => e.name)
       .join(', ')}.`
@@ -86,7 +86,7 @@ export const geminiService = {
         contents: prompt,
       })
       return response.text || (lang === 'zh' ? '未找到建议。' : 'No advice found.')
-    } catch (error) {
+    } catch {
       return lang === 'zh' ? '连接 AI 教练出错。' : 'Error connecting to AI coach.'
     }
   },

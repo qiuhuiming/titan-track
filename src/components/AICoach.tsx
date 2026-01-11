@@ -17,21 +17,36 @@ const AICoach: React.FC<AICoachProps> = ({ logs, exercises, language }) => {
   const [query, setQuery] = useState('')
   const [chatResponse, setChatResponse] = useState<string | null>(null)
 
-  const handleFullAnalysis = async () => {
+  const handleFullAnalysis = () => {
     setLoading(true)
-    // Modified to pass language for prompt instructions
-    const result = await geminiService.analyzePerformance(logs, exercises, language)
-    setAnalysis(result)
-    setLoading(false)
+    geminiService
+      .analyzePerformance(logs, exercises, language)
+      .then((result) => {
+        setAnalysis(result)
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to analyze performance:', error)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
-  const handleChat = async (e: React.FormEvent) => {
+  const handleChat = (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim()) return
     setLoading(true)
-    const result = await geminiService.getWorkoutAdvice(query, logs, exercises, language)
-    setChatResponse(result)
-    setLoading(false)
+    geminiService
+      .getWorkoutAdvice(query, logs, exercises, language)
+      .then((result) => {
+        setChatResponse(result)
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to get workout advice:', error)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   return (
@@ -71,7 +86,9 @@ const AICoach: React.FC<AICoachProps> = ({ logs, exercises, language }) => {
               aria-label="Ask AI Coach"
               placeholder={t.ask_anything}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value)
+              }}
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 pr-12 pl-4 outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button

@@ -20,6 +20,18 @@ interface DashboardProps {
   onNavigate: (tab: TabType, params?: NavigationParams) => void
 }
 
+interface CalendarDay {
+  day: number
+  currentMonth: boolean
+  date?: string
+  isCompleted?: boolean
+  isPlanned?: boolean
+  isToday?: boolean
+  isPast?: boolean
+  isFuture?: boolean
+  isMissed?: boolean
+}
+
 const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language, onNavigate }) => {
   const t = translations[language]
   const [viewDate, setViewDate] = useState(new Date())
@@ -34,17 +46,19 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
 
   const longPressTimer = useRef<number | null>(null)
 
-  const handleLongPressStart = (e: React.MouseEvent | React.TouchEvent, dayData: any) => {
+  const handleLongPressStart = (e: React.MouseEvent | React.TouchEvent, dayData: CalendarDay) => {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
     longPressTimer.current = window.setTimeout(() => {
+      if (!dayData.date) return
       const dayLogs = logs.filter((l) => l.date === dayData.date)
       const dayPlan = plans.find((p) => p.date === dayData.date)
 
       if (dayPlan || dayLogs.length > 0) {
         setPreviewDay({
-          ...dayData,
+          date: dayData.date,
+          day: dayData.day,
           plan: dayPlan,
           logs: dayLogs,
           x: clientX,
@@ -66,7 +80,9 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
   }
 
   useEffect(() => {
-    const handleClick = () => setPreviewDay(null)
+    const handleClick = () => {
+      setPreviewDay(null)
+    }
     if (previewDay) {
       window.addEventListener('mousedown', handleClick)
       window.addEventListener('touchstart', handleClick)
@@ -84,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
     const lastDay = new Date(currentYear, currentMonth + 1, 0)
 
     const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const todayStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     today.setHours(0, 0, 0, 0)
 
     const days = []
@@ -98,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
     // Fill current month days
     for (let i = 1; i <= lastDay.getDate(); i++) {
       const dateObj = new Date(currentYear, currentMonth, i)
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+      const dateStr = `${String(currentYear)}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
       const plan = plans.find((p) => p.date === dateStr)
       const isCompleted = plan?.isCompleted || logs.some((l) => l.date === dateStr)
       const isPlanned = !!plan
@@ -168,7 +184,9 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
           <div className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-1.5">
             <button
               type="button"
-              onClick={() => changeMonth(-1)}
+              onClick={() => {
+                changeMonth(-1)
+              }}
               className="rounded-xl p-1.5 text-slate-400 transition-all hover:bg-white hover:text-indigo-600 hover:shadow-sm active:scale-95"
             >
               <ChevronLeft size={18} />
@@ -181,7 +199,9 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
             </span>
             <button
               type="button"
-              onClick={() => changeMonth(1)}
+              onClick={() => {
+                changeMonth(1)
+              }}
               className="rounded-xl p-1.5 text-slate-400 transition-all hover:bg-white hover:text-indigo-600 hover:shadow-sm active:scale-95"
             >
               <ChevronRight size={18} />
@@ -192,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
         <div className="relative z-10 grid grid-cols-7 gap-1.5 sm:gap-3">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, index) => (
             <div
-              key={`day-header-${index}`}
+              key={`day-header-${String(index)}`}
               className="mb-2 text-center text-[10px] font-black tracking-widest text-slate-300 uppercase"
             >
               {d}
@@ -252,23 +272,40 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
               bgColor = 'bg-transparent'
             }
 
-            const dayKey = d.currentMonth ? `day-${d.date}` : `prev-${i}-${d.day}`
+            const dayKey = d.currentMonth
+              ? `day-${d.date ?? 'unknown'}`
+              : `prev-${String(i)}-${String(d.day)}`
 
             return (
               <button
                 key={dayKey}
                 type="button"
-                onMouseDown={(e) => d.currentMonth && handleLongPressStart(e, d)}
+                onMouseDown={(e) => {
+                  if (d.currentMonth) handleLongPressStart(e, d)
+                }}
                 onMouseUp={handleLongPressEnd}
                 onMouseLeave={handleLongPressEnd}
-                onTouchStart={(e) => d.currentMonth && handleLongPressStart(e, d)}
+                onTouchStart={(e) => {
+                  if (d.currentMonth) handleLongPressStart(e, d)
+                }}
                 onTouchEnd={handleLongPressEnd}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    d.currentMonth && handleLongPressStart(e as any, d)
+                  if ((e.key === 'Enter' || e.key === ' ') && d.currentMonth && d.date) {
+                    const dayLogs = logs.filter((l) => l.date === d.date)
+                    const dayPlan = plans.find((p) => p.date === d.date)
+                    if (dayPlan || dayLogs.length > 0) {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      setPreviewDay({
+                        date: d.date,
+                        day: d.day,
+                        plan: dayPlan,
+                        logs: dayLogs,
+                        x: rect.left + rect.width / 2,
+                        y: rect.top,
+                      })
+                    }
                   }
                 }}
-                onKeyUp={handleLongPressEnd}
                 className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border transition-all sm:rounded-2xl ${borderStyle} ${bgColor} ${textColor} ${shadow} ${
                   d.isPlanned
                     ? 'z-10 scale-105 cursor-pointer hover:scale-110'
@@ -312,8 +349,12 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
         >
           <div
             role="none"
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              e.stopPropagation()
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation()
+            }}
             className="w-[300px] overflow-hidden rounded-[2.5rem] border border-white bg-white/98 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14),0_0_0_1px_rgba(0,0,0,0.02)] backdrop-blur-2xl"
           >
             <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 text-white">
@@ -336,7 +377,7 @@ const Dashboard: React.FC<DashboardProps> = ({ logs, exercises, plans, language,
                   className="group/btn flex items-center gap-2 rounded-xl border border-white/30 bg-white/20 px-3 py-2 transition-all duration-200 hover:bg-white/30 active:scale-95"
                 >
                   <span className="text-[11px] font-black tracking-wider uppercase">
-                    {(t as any).go_to_plan}
+                    {t.go_to_plan}
                   </span>
                   <ArrowRight
                     size={14}
