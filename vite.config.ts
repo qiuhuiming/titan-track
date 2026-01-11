@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       strictPort: true,
+      host: true, // Listen on all addresses for Tauri iOS dev
     },
     envPrefix: ['VITE_', 'TAURI_'],
     define: {
