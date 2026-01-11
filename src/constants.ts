@@ -1,4 +1,4 @@
-import type { Exercise, WorkoutEntry, WorkoutPlan } from './types';
+import type { Exercise, WorkoutEntry, WorkoutPlan } from './types'
 
 export const INITIAL_EXERCISES: Exercise[] = [
   { id: 'squat', name: '深蹲', muscleGroup: 'Legs', equipment: 'Barbell' },
@@ -10,7 +10,7 @@ export const INITIAL_EXERCISES: Exercise[] = [
   { id: 'dip', name: '双杠臂屈伸', muscleGroup: 'Chest', equipment: 'Bodyweight' },
   { id: 'lunge', name: '弓步', muscleGroup: 'Legs', equipment: 'Bodyweight' },
   { id: 'bicep-curl', name: '二头弯举', muscleGroup: 'Arms', equipment: 'Dumbbell' },
-  { id: 'plank', name: '平板支撑', muscleGroup: 'Core', equipment: 'Bodyweight' }
-];
-export const INITIAL_PLANS: WorkoutPlan[] = [];
-export const INITIAL_LOGS: WorkoutEntry[] = [];
+  { id: 'plank', name: '平板支撑', muscleGroup: 'Core', equipment: 'Bodyweight' },
+]
+export const INITIAL_PLANS: WorkoutPlan[] = []
+export const INITIAL_LOGS: WorkoutEntry[] = []
