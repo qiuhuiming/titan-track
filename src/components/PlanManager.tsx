@@ -61,6 +61,23 @@ const PlanManager: React.FC<PlanManagerProps> = ({ plans, exercises, onUpdatePla
     }
   }, [initialParams, plans]);
 
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAdding) setIsAdding(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isAdding]);
+
+  // Disable background scroll when modal is open
+  useEffect(() => {
+    if (isAdding) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isAdding]);
+
   const uniquePlans = useMemo(() => {
     const uniquePlansMap = new Map<string, WorkoutPlan>();
     plans.forEach(plan => {
