@@ -1,5 +1,5 @@
 
-import { Exercise, WorkoutEntry, WorkoutPlan } from './types';
+import type { Exercise, WorkoutEntry, WorkoutPlan } from './types';
 
 export const INITIAL_EXERCISES: Exercise[] = [
   // Chest
@@ -31,6 +31,7 @@ export const INITIAL_PLANS: WorkoutPlan[] = [
     title: '上半身推力日 (Push Day)',
     tags: ['Chest', 'Shoulders', 'Arms'],
     isCompleted: true,
+    createdAt: '2026-01-01T08:00:00.000Z',
     exercises: [
       { exerciseId: '1', sets: [{ id: 's1', weight: 60, reps: 8 }, { id: 's2', weight: 60, reps: 8 }, { id: 's3', weight: 60, reps: 8 }] },
       { exerciseId: '4', sets: [{ id: 's4', weight: 15, reps: 10 }, { id: 's5', weight: 15, reps: 10 }] },
@@ -44,6 +45,7 @@ export const INITIAL_PLANS: WorkoutPlan[] = [
     title: '上半身拉力日 (Pull Day)',
     tags: ['Back', 'Arms'],
     isCompleted: true,
+    createdAt: '2026-01-02T08:00:00.000Z',
     exercises: [
       { exerciseId: '7', sets: [{ id: 's9', weight: 0, reps: 10 }, { id: 's10', weight: 0, reps: 8 }] },
       { exerciseId: '9', sets: [{ id: 's11', weight: 50, reps: 10 }, { id: 's12', weight: 50, reps: 10 }] },
@@ -57,6 +59,7 @@ export const INITIAL_PLANS: WorkoutPlan[] = [
     title: '腿部基础力量 (Leg Day)',
     tags: ['Legs'],
     isCompleted: true,
+    createdAt: '2026-01-04T08:00:00.000Z',
     exercises: [
       { exerciseId: '2', sets: [{ id: 's16', weight: 80, reps: 5 }, { id: 's17', weight: 80, reps: 5 }, { id: 's18', weight: 80, reps: 5 }] },
       { exerciseId: '13', sets: [{ id: 's19', weight: 70, reps: 8 }, { id: 's20', weight: 70, reps: 8 }] },
@@ -68,7 +71,8 @@ export const INITIAL_PLANS: WorkoutPlan[] = [
     date: '2026-01-08',
     title: '恢复性有氧 + 核心',
     tags: ['Cardio', 'Core'],
-    isCompleted: false, // Missed
+    isCompleted: false,
+    createdAt: '2026-01-07T08:00:00.000Z',
     exercises: [
       { exerciseId: '5', sets: [{ id: 's23', weight: 0, timeMinutes: 30 }] },
       { exerciseId: '14', sets: [{ id: 's24', weight: 0, timeMinutes: 2 }] }
@@ -80,6 +84,7 @@ export const INITIAL_PLANS: WorkoutPlan[] = [
     title: '力量循环: 全身激活动作',
     tags: ['Full Body'],
     isCompleted: false,
+    createdAt: '2026-01-09T08:00:00.000Z',
     exercises: [
       { exerciseId: '3', sets: [{ id: 's25', weight: 100, reps: 5 }] },
       { exerciseId: '1', sets: [{ id: 's26', weight: 65, reps: 6 }] },

@@ -102,7 +102,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white md:bg-slate-50 flex flex-col md:flex-row pb-[calc(70px+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="h-screen bg-white md:bg-slate-50 flex flex-col md:flex-row overflow-hidden">
       
       <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 p-6 flex-col h-screen sticky top-0">
         <div className="flex items-center space-x-2 mb-10">
@@ -159,8 +159,8 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-grow p-4 md:p-8 lg:p-12">
-        <div className="max-w-5xl mx-auto h-full">
+      <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 lg:p-12 pb-[calc(70px+env(safe-area-inset-bottom))] md:pb-0">
+        <div className="max-w-5xl mx-auto">
           {activeTab === TabType.DASHBOARD && (
             <Dashboard 
               logs={logs} 

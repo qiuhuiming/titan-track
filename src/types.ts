@@ -25,14 +25,15 @@ export interface WorkoutSet {
 
 export interface WorkoutPlan {
   id: string;
-  date: string; // ISO date string
+  date: string;
   title: string;
-  tags: string[]; // Usually muscle groups
+  tags: string[];
   exercises: {
     exerciseId: string;
     sets: WorkoutSet[];
   }[];
   isCompleted?: boolean;
+  createdAt?: string;
 }
 
 export interface WorkoutEntry {
@@ -55,5 +56,5 @@ export type TabType = typeof TabType[keyof typeof TabType];
 
 export interface NavigationParams {
   date?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
