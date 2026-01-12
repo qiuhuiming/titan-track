@@ -20,7 +20,7 @@ import ExerciseManager from './components/ExerciseManager'
 import PlanManager from './components/PlanManager'
 import WorkoutLog from './components/WorkoutLog'
 import { INITIAL_EXERCISES } from './constants'
-import { tauriStorageService } from './services/tauriStorageService'
+import { storageService } from './services/storageService'
 import { translations } from './translations'
 import {
   type AISettings,
@@ -47,27 +47,17 @@ const App: FC = () => {
   const settingsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true)
-        const [loadedExercises, loadedLogs, loadedPlans, loadedAISettings] = await Promise.all([
-          tauriStorageService.getExercises(),
-          tauriStorageService.getLogs(),
-          tauriStorageService.getPlans(),
-          tauriStorageService.getAISettings(),
-        ])
-        setExercises(loadedExercises)
-        setLogs(loadedLogs)
-        setPlans(loadedPlans)
-        setAISettings(loadedAISettings)
-      } catch (error) {
-        console.error('Failed to load data:', error)
-      } finally {
-        setIsLoading(false)
-      }
+    try {
+      setIsLoading(true)
+      setExercises(storageService.getExercises())
+      setLogs(storageService.getLogs())
+      setPlans(storageService.getPlans())
+      setAISettings(storageService.getAISettings())
+    } catch (error) {
+      console.error('Failed to load data:', error)
+    } finally {
+      setIsLoading(false)
     }
-
-    void loadData()
 
     const savedLang = localStorage.getItem('titan_track_lang')
     if (savedLang === 'zh' || savedLang === 'en') setLanguage(savedLang)
@@ -121,15 +111,13 @@ const App: FC = () => {
 
   const t = translations[language]
 
-  const handleClearAllData = async () => {
+  const handleClearAllData = () => {
     if (!window.confirm(t.confirm_clear_all)) return
 
     try {
-      await Promise.all([
-        tauriStorageService.saveExercises(INITIAL_EXERCISES),
-        tauriStorageService.saveLogs([]),
-        tauriStorageService.savePlans([]),
-      ])
+      storageService.saveExercises(INITIAL_EXERCISES)
+      storageService.saveLogs([])
+      storageService.savePlans([])
       setExercises(INITIAL_EXERCISES)
       setLogs([])
       setPlans([])
@@ -142,9 +130,7 @@ const App: FC = () => {
 
   const handleUpdateExercises = (newExercises: Exercise[]) => {
     setExercises(newExercises)
-    tauriStorageService.saveExercises(newExercises).catch((error: unknown) => {
-      console.error('Failed to save exercises:', error)
-    })
+    storageService.saveExercises(newExercises)
   }
 
   const handleCloseExerciseManager = () => {
@@ -153,23 +139,17 @@ const App: FC = () => {
 
   const handleUpdateLogs = (newLogs: WorkoutEntry[]) => {
     setLogs(newLogs)
-    tauriStorageService.saveLogs(newLogs).catch((error: unknown) => {
-      console.error('Failed to save logs:', error)
-    })
+    storageService.saveLogs(newLogs)
   }
 
   const handleUpdatePlans = (newPlans: WorkoutPlan[]) => {
     setPlans(newPlans)
-    tauriStorageService.savePlans(newPlans).catch((error: unknown) => {
-      console.error('Failed to save plans:', error)
-    })
+    storageService.savePlans(newPlans)
   }
 
   const handleSaveAISettings = (newSettings: AISettings) => {
     setAISettings(newSettings)
-    tauriStorageService.saveAISettings(newSettings).catch((error: unknown) => {
-      console.error('Failed to save AI settings:', error)
-    })
+    storageService.saveAISettings(newSettings)
   }
 
   const navigateToTab = (tab: TabType, params: NavigationParams | null = null) => {
@@ -299,9 +279,7 @@ const App: FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    void handleClearAllData()
-                  }}
+                  onClick={handleClearAllData}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-rose-600 transition-all hover:bg-rose-50"
                 >
                   {t.clear_all_data}

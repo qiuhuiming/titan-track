@@ -2,10 +2,10 @@
 
 ## Tech Stack
 - Frontend: React 19 + TypeScript + Tailwind CSS v4
-- Backend: Tauri v2 + Rust
-- Storage: File-based JSON with Mutex in-memory cache
+- Storage: localStorage with JSON serialization
 - Package Manager: Bun
-- AI: Google Gemini API (@google/genai)
+- Build Tool: Vite with PWA plugin
+- AI: Multi-provider (OpenAI, Anthropic, Gemini, DeepSeek)
 
 ## Component Tree
 ```
@@ -13,7 +13,8 @@ App.tsx (Root - 394 lines)
 ├── Dashboard.tsx (492 lines) - Calendar view + preview
 ├── WorkoutLog.tsx (710 lines) - Workout logging + execution
 ├── PlanManager.tsx (790 lines) - Plan CRUD + grouping
-├── AICoach.tsx (138 lines) - AI interface
+├── AICoach.tsx (138 lines) - AI chat interface
+├── AISettingsModal.tsx - AI provider configuration
 └── ExerciseManager.tsx (251 lines) - Exercise catalog (modal)
 ```
 
@@ -27,23 +28,16 @@ Callback Function (onUpdateXxx)
     ↓
 Parent State Update (App.tsx)
     ↓
-Tauri Storage Service (tauriStorageService.ts)
+Storage Service (storageService.ts)
     ↓
-Tauri Bridge (@tauri-apps/api/core)
-    ↓
-Rust Command (commands.rs)
-    ↓
-Rust Storage Layer (storage.rs - Mutex<Vec<T>>)
-    ↓
-File System (AppDataDir/exercises.json, logs.json, plans.json)
+localStorage (Browser)
 ```
 
 ## Storage Architecture
-- **Files:** exercises.json, logs.json, plans.json
-- **Location:** AppHandle.path().app_data_dir()
-- **Thread Safety:** Mutex<Vec<T>> for in-memory caching
+- **Keys:** titan_track_exercises, titan_track_logs, titan_track_plans, titan_track_ai_settings
+- **Location:** Browser localStorage
 - **Persistence:** Auto-save on state updates
-- **Initialization:** Load on app start, seed if empty
+- **Initialization:** Load on app start, seed with initial data if empty
 
 ## Key Architectural Decisions
 
@@ -52,9 +46,9 @@ File System (AppDataDir/exercises.json, logs.json, plans.json)
 - **Reasoning:** App has 5 components, prop depth is 1-2 levels
 - **Future Consideration:** May need Context if component count grows to 10+
 
-### Why File-Based Storage?
-- **Advantages:** Simple, no database dependencies, easy debugging
-- **Disadvantages:** No queries, limited to full data loads
+### Why localStorage?
+- **Advantages:** Simple, no backend dependencies, works offline
+- **Disadvantages:** Limited to ~5MB, no cross-device sync
 - **Trade-off:** Acceptable for current scale (<1000 records per type)
 
 ### Why Mobile-First?
@@ -74,9 +68,9 @@ File System (AppDataDir/exercises.json, logs.json, plans.json)
 - **Usage:** translations[language] object accessed across components
 
 ## AI Integration
-- **Service:** geminiService.ts wraps Google GenAI SDK
-- **Model:** gemini-3-flash-preview
-- **Features:** Weekly deep dive analysis + Q&A chat
+- **Service:** aiService.ts wraps multiple AI provider SDKs
+- **Providers:** OpenAI, Anthropic, Gemini, DeepSeek
+- **Features:** Multi-turn conversation with ChatGPT-style UI
 - **Language:** Responds in user's selected language
 
 ## Design System

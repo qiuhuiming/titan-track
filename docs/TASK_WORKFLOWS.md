@@ -5,12 +5,11 @@
 ### Step 1: Understand Context
 1. Read **docs/ARCHITECTURE.md** for overall system context
 2. Identify affected components from component tree
-3. Determine if feature requires backend changes
+3. Determine if feature requires storage changes
 
 ### Step 2: Read Relevant Documentation
 - **Frontend work:** Read docs/COMPONENT_GUIDE.md
 - **State changes:** Read docs/STATE_MANAGEMENT.md
-- **Backend work:** Read docs/TAURI_BACKEND.md
 - **UI changes:** Read docs/UI_PATTERNS.md
 
 ### Step 3: Implement Component
@@ -19,7 +18,7 @@
 3. Implement with useState for local state
 4. Add callback props if parent state updates needed
 5. Follow styling patterns from UI_PATTERNS.md
-6. Test with: `bun run tauri dev`
+6. Test with: `bun run dev`
 
 ### Step 4: Update Parent Component (if needed)
 1. Import new component in parent
@@ -34,8 +33,8 @@
 
 ### Step 6: Verify Storage (if needed)
 1. Test data persists after reload
-2. Check Tauri console for errors
-3. Verify JSON files updated correctly
+2. Check browser console for errors
+3. Verify localStorage updated correctly
 
 ## Fixing a Bug
 
@@ -51,7 +50,7 @@
 
 ### Step 3: Debug
 1. Use browser DevTools React Profiler
-2. Check Tauri console: View → Toggle Developer Tools
+2. Check browser console for errors
 3. Add console.log for state tracking
 
 ### Step 4: Fix Bug
@@ -91,37 +90,29 @@
 2. Test all refactored features
 3. Check React DevTools for state consistency
 
-## Adding Backend Storage
+## Adding Storage for New Data Type
 
-### Step 1: Define Model
-1. Open src-tauri/src/models.rs
-2. Add struct following existing patterns
-3. Add serde attributes for TypeScript compatibility
+### Step 1: Define TypeScript Type
+1. Open src/types.ts
+2. Add interface following existing patterns
 
-### Step 2: Implement Storage
-1. Open src-tauri/src/storage.rs
-2. Add get/save methods following Mutex pattern
-3. Add JSON file constant at top
+### Step 2: Add Storage Key
+1. Open src/services/storageService.ts
+2. Add key to STORAGE_KEYS object
 
-### Step 3: Create Command
-1. Open src-tauri/src/commands.rs
-2. Add #tauri::command functions
-3. Use State<AppStorage> parameter
+### Step 3: Add Storage Methods
+1. Add getter method (returns data or default)
+2. Add setter method (saves to localStorage)
 
-### Step 4: Register Command
-1. Open src-tauri/src/lib.rs
-2. Add command to generate_handler! macro
-3. Verify Tauri compiles
+### Step 4: Update App.tsx
+1. Add state for new data type
+2. Add to initialization useEffect
+3. Create update handler function
 
-### Step 5: Add Frontend Service
-1. Open src/services/tauriStorageService.ts
-2. Add async method following existing patterns
-3. Add error handling and fallback logic
-
-### Step 6: Test
-1. Build: `bun run build`
-2. Run: `bun run tauri dev`
-3. Test data persistence
+### Step 5: Test
+1. Run: `bun run dev`
+2. Test data persistence
+3. Verify data survives page refresh
 
 ## Adding UI Feature
 
@@ -181,22 +172,21 @@ bun run check
 # Runs typecheck + lint + format check
 ```
 
-### Tauri Developer Tools
-1. Right-click app → Toggle Developer Tools
+### Browser Developer Tools
+1. Right-click → Inspect
 2. Check Console tab for errors
-3. Check Network tab for Tauri invoke failures
+3. Check Application → Local Storage for data
 
 ## Common Commands
 
 ### Development
 ```bash
 bun run dev          # Start Vite dev server
-bun run tauri dev    # Run full Tauri app
 ```
 
 ### Building
 ```bash
-bun run build        # Build frontend + Tauri
+bun run build        # Build frontend
 bun run preview      # Preview production build
 ```
 
@@ -208,12 +198,6 @@ bun run typecheck    # Run TypeScript type checker
 bun run format       # Format code with Prettier
 bun run format:check # Check code formatting
 bun run check        # Run all checks (typecheck + lint + format)
-```
-
-### iOS Development
-```bash
-bun run ios:init    # Initialize iOS platform
-bun run ios:dev     # Run iOS dev build
 ```
 
 ## Git Workflow
@@ -230,7 +214,7 @@ Note: Pre-commit hooks are configured to run linting and type checking automatic
 ## Context Window Considerations
 
 When context window is small (<32k tokens):
-1. **ALWAYS read:** docs/ARCHITECTURE.md (~150 lines)
+1. **ALWAYS read:** docs/ARCHITECTURE.md (~80 lines)
 2. **THEN read:** One domain-specific doc (STATE_MANAGEMENT, COMPONENT_GUIDE, etc.)
 3. **SKIP:** Other docs until needed
 
@@ -238,7 +222,6 @@ When context window is large (>64k tokens):
 1. Read all architecture docs
 2. Read 2-3 domain-specific docs
 3. Reference: TASK_WORKFLOWS.md for workflow guidance
-```
 
 ## Agent-Specific Reading Strategies
 
@@ -247,14 +230,11 @@ When context window is large (>64k tokens):
 2. Read: COMPONENT_GUIDE.md (patterns)
 3. Read: UI_PATTERNS.md (styling)
 4. Optional: STATE_MANAGEMENT.md (if state work)
-5. Skip: TAURI_BACKEND.md
 
-### Backend/Rust Agents
+### State Management Agents
 1. Read: ARCHITECTURE.md (context)
-2. Read: TAURI_BACKEND.md (patterns)
+2. Read: STATE_MANAGEMENT.md (patterns)
 3. Read: DATA_MODELS.md (types)
-4. Optional: COMPONENT_GUIDE.md (if frontend integration needed)
-5. Skip: UI_PATTERNS.md
 
 ### Full-Stack Agents
 1. Read: ARCHITECTURE.md (always first)

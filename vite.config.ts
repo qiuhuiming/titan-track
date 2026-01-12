@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: true,
     },
-    envPrefix: ['VITE_', 'TAURI_'],
+    envPrefix: ['VITE_'],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
@@ -61,9 +61,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      target: process.env.TAURI_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
-      minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
-      sourcemap: !!process.env.TAURI_DEBUG,
+      target: 'es2020',
+      minify: 'esbuild',
+      sourcemap: false,
     },
   }
 })
