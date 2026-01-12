@@ -29,16 +29,39 @@ Callback Function (onUpdateXxx)
     ↓
 Parent State Update (App.tsx)
     ↓
-Storage Service (storageService.ts)
+Data Service (dataService.ts)
     ↓
-localStorage (Browser)
+API Service (apiService.ts)
+    ↓
+Backend API (FastAPI)
+    ↓
+PostgreSQL Database
+```
+
+## Authentication Architecture
+```
+Frontend                          Backend
+--------                          -------
+authService.register() ────────→ POST /api/v1/auth/register
+authService.login()    ────────→ POST /api/v1/auth/login
+                       ←──────── JWT Token (HS256)
+localStorage (token)
+apiService (Bearer)    ────────→ Protected endpoints
+                                 verify_token() dependency
 ```
 
 ## Storage Architecture
-- **Keys:** titan_track_exercises, titan_track_logs, titan_track_plans, titan_track_ai_settings
+
+### Backend (Primary)
+- **Database:** PostgreSQL
+- **ORM:** SQLAlchemy (async)
+- **Tables:** users, exercises, workout_plans, workout_entries
+- **Auth:** JWT tokens stored in localStorage (`titan_track_token`)
+
+### Frontend (Settings Only)
+- **Keys:** titan_track_lang, titan_track_ai_settings, titan_track_token, titan_track_user
 - **Location:** Browser localStorage
-- **Persistence:** Auto-save on state updates
-- **Initialization:** Load on app start, seed with initial data if empty
+- **Purpose:** UI preferences and authentication state
 
 ## Key Architectural Decisions
 
@@ -47,10 +70,10 @@ localStorage (Browser)
 - **Reasoning:** App has 5 components, prop depth is 1-2 levels
 - **Future Consideration:** May need Context if component count grows to 10+
 
-### Why localStorage?
-- **Advantages:** Simple, no backend dependencies, works offline
-- **Disadvantages:** Limited to ~5MB, no cross-device sync
-- **Trade-off:** Acceptable for current scale (<1000 records per type)
+### Why Backend API?
+- **Advantages:** Cross-device sync, data security, server-side validation
+- **Authentication:** Email/password with JWT tokens
+- **Deployment:** Backend on Fly.io, Frontend on Vercel
 
 ### Why Mobile-First?
 - **Primary Use Case:** Fitness apps used primarily on mobile

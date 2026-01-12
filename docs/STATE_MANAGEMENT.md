@@ -3,11 +3,21 @@
 ## Global State (App.tsx)
 ```typescript
 // Location: src/App.tsx
+
+// Authentication state
+const [user, setUser] = useState<AuthUser | null>(null);
+const [authLoading, setAuthLoading] = useState(true);
+
+// Navigation state
 const [activeTab, setActiveTab] = useState<TabType>(TabType.DASHBOARD);
 const [activeTabParams, setActiveTabParams] = useState<NavigationParams | null>(null);
+
+// Data state (loaded from backend API)
 const [exercises, setExercises] = useState<Exercise[]>([]);
 const [logs, setLogs] = useState<WorkoutEntry[]>([]);
 const [plans, setPlans] = useState<WorkoutPlan[]>([]);
+
+// UI state
 const [language, setLanguage] = useState<Language>('zh');
 const [isLoading, setIsLoading] = useState(true);
 const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -15,23 +25,53 @@ const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false);
 const [aiSettings, setAISettings] = useState<AISettings | null>(null);
 ```
 
-## State Update Pattern
-
-### Component Calls Parent
+## Authentication Flow
 ```typescript
-// In child component
-const { onUpdateLogs, logs } = props;
-const handleAddLog = (newLog: WorkoutEntry) => {
-  onUpdateLogs([...logs, newLog]);
+// On app start
+useEffect(() => {
+  const initAuth = async () => {
+    setAuthLoading(true);
+    const user = await authService.initialize();
+    setUser(user);
+    setAuthLoading(false);
+  };
+  void initAuth();
+}, []);
+
+// Login/Register
+const handleAuthSubmit = async (e: FormEvent) => {
+  const result = authMode === 'login'
+    ? await authService.login(email, password)
+    : await authService.register(email, password);
+  if (!result.error) {
+    setUser(authService.getUser());
+  }
+};
+
+// Logout
+const handleLogout = () => {
+  authService.signOut();
+  setUser(null);
 };
 ```
 
-### Parent Updates State + Persists
+## State Update Pattern
+
+### Component Calls Parent (via dataService)
+```typescript
+// In child component
+const { onCreateExercise } = props;
+const handleCreate = async (exercise: Exercise) => {
+  await onCreateExercise(exercise);  // Calls API then updates state
+};
+```
+
+### Parent Updates State via API
 ```typescript
 // Location: src/App.tsx
-const handleUpdateLogs = (newLogs: WorkoutEntry[]) => {
-  setLogs(newLogs);  // React state update
-  storageService.saveLogs(newLogs);  // Persist to localStorage
+const handleCreateExercise = async (exercise: Exercise) => {
+  const created = await dataService.createExercise(exercise);  // API call
+  setExercises((prev) => [...prev, created]);  // Update local state
 };
 ```
 

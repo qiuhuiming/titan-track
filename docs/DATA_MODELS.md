@@ -1,5 +1,32 @@
 # Data Models Reference
 
+## Authentication Types
+
+### AuthUser
+```typescript
+// Location: src/services/authService.ts
+interface AuthUser {
+  id: string;
+  email: string;
+}
+```
+
+### AuthState
+```typescript
+interface AuthState {
+  user: AuthUser | null;
+  isLoading: boolean;
+}
+```
+
+### TokenResponse (Backend)
+```typescript
+interface TokenResponse {
+  access_token: string;
+  token_type: string;  // "bearer"
+}
+```
+
 ## Core Types (TypeScript)
 
 ### Exercise
