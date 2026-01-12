@@ -25,3 +25,17 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.uv/
+*.egg-info/
+.eggs/
+*.egg
