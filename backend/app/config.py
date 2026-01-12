@@ -8,9 +8,8 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
-    # Supabase Auth
-    SUPABASE_URL: str = ""
-    SUPABASE_JWT_SECRET: str = ""
+    # Supabase Auth (JWKS-based, no shared secret needed)
+    SUPABASE_URL: str  # Required for JWKS endpoint
 
     # Server
     HOST: str = "0.0.0.0"

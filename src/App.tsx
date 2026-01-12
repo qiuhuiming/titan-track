@@ -50,7 +50,8 @@ const App: FC = () => {
   const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false)
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false)
   const [aiSettings, setAISettings] = useState<AISettings | null>(null)
-  const settingsRef = useRef<HTMLDivElement | null>(null)
+  const desktopSettingsRef = useRef<HTMLDivElement | null>(null)
+  const mobileSettingsRef = useRef<HTMLDivElement | null>(null)
 
   // Auth state
   const [user, setUser] = useState<User | null>(null)
@@ -150,7 +151,10 @@ const App: FC = () => {
     }
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const isInsideDesktop = desktopSettingsRef.current?.contains(target)
+      const isInsideMobile = mobileSettingsRef.current?.contains(target)
+      if (!isInsideDesktop && !isInsideMobile) {
         setIsSettingsOpen(false)
       }
     }
@@ -297,14 +301,112 @@ const App: FC = () => {
           ))}
         </nav>
 
-        <button
-          type="button"
-          onClick={handleLanguageToggle}
-          className="mt-auto flex items-center space-x-3 rounded-xl px-4 py-3 text-slate-600 transition-colors hover:bg-slate-100"
-        >
-          <Globe size={20} />
-          <span className="font-medium">{language === 'zh' ? 'English' : '中文'}</span>
-        </button>
+        <div className="mt-auto space-y-2">
+          <button
+            type="button"
+            onClick={handleLanguageToggle}
+            className="flex w-full items-center space-x-3 rounded-xl px-4 py-3 text-slate-600 transition-colors hover:bg-slate-100"
+          >
+            <Globe size={20} />
+            <span className="font-medium">{language === 'zh' ? 'English' : '中文'}</span>
+          </button>
+
+          {/* Settings button with dropdown for desktop */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSettingsOpen((prev) => !prev)
+              }}
+              className={`flex w-full items-center space-x-3 rounded-xl px-4 py-3 transition-colors ${
+                isSettingsOpen ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Settings size={20} />
+              <span className="font-medium">{t.settings}</span>
+            </button>
+
+            {isSettingsOpen && (
+              <div
+                ref={desktopSettingsRef}
+                className="animate-in zoom-in-95 fade-in absolute bottom-full left-0 z-50 mb-2 w-full rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl duration-200"
+              >
+                {/* Auth buttons */}
+                {authService.isConfigured() && (
+                  <>
+                    {user ? (
+                      <>
+                        <div className="truncate px-3 py-2 text-xs text-slate-500">
+                          {user.email}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleSync()}
+                          disabled={isSyncing}
+                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                        >
+                          <RefreshCw
+                            size={18}
+                            className={`text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`}
+                          />
+                          <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                        >
+                          <LogOut size={18} className="text-slate-400" />
+                          <span>Sign Out</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleLogin}
+                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
+                      >
+                        <LogIn size={18} className="text-indigo-500" />
+                        <span>Sign in with Google</span>
+                      </button>
+                    )}
+                    <div className="my-2 border-t border-slate-100" />
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSettingsOpen(false)
+                    setIsAISettingsOpen(true)
+                  }}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
+                >
+                  <Bot size={18} className="text-indigo-500" />
+                  <span>{t.ai_settings}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSettingsOpen(false)
+                    setIsExerciseManagerOpen(true)
+                  }}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
+                >
+                  <Dumbbell size={18} className="text-indigo-500" />
+                  <span>{t.manage_exercises}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearAllData}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-rose-600 transition-all hover:bg-rose-50"
+                >
+                  {t.clear_all_data}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
 
       <header
@@ -326,7 +428,7 @@ const App: FC = () => {
           >
             {language === 'zh' ? 'EN' : '中文'}
           </button>
-          <div ref={settingsRef} className="relative">
+          <div ref={mobileSettingsRef} className="relative">
             <button
               type="button"
               onClick={() => {
