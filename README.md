@@ -1,77 +1,78 @@
-# Tauri v2 App Template
+# TitanTrack
 
-A starter template for building apps with Tauri v2, React, and Tailwind CSS.
+AI-powered fitness tracking PWA for planning workouts, logging progress, and getting personalized coaching.
+
+## Features
+
+- **Workout Planning** - Create plans with exercises, sets, weights, and reps
+- **Progress Logging** - Log completed workouts with RPE tracking
+- **Training History** - Interactive calendar view with streak tracking
+- **AI Coaching** - Multi-provider support (OpenAI, Anthropic, Gemini, DeepSeek)
+- **Offline Support** - Works offline as a PWA
+- **Bilingual** - English and Chinese
+
+## UI/UX Flow
+
+4-tab navigation (bottom nav on mobile, sidebar on desktop):
+
+| Tab | Description |
+|-----|-------------|
+| **HOME** | Calendar view, streak counter, long-press day to preview |
+| **LOG** | Execute planned workouts or log ad-hoc sessions |
+| **PLAN** | Create/edit workout plans with grouped sets |
+| **AI COACH** | ChatGPT-style AI assistant for fitness advice |
+
+### Key Interactions
+
+- **Dashboard**: Long-press a calendar day to preview exercises
+- **WorkoutLog**: Tap "Start Now" on a plan to begin workout execution
+- **PlanManager**: Add exercises with grouped sets (e.g., 60kg × 8 reps × 4 sets)
+- **AICoach**: Chat with AI, select model, multi-turn conversations
 
 ## Tech Stack
 
-- **Backend**: Tauri v2.9.5 (Rust)
-- **Frontend**: React 19 + TypeScript
-- **Styling**: Tailwind CSS v4
-- **Package Manager**: Bun
+- React 19 + TypeScript
+- Tailwind CSS v4
+- Vite + vite-plugin-pwa
+- localStorage for data persistence
+- Bun package manager
 
-## Prerequisites
+## Quick Start
 
-- [Rust](https://rustup.rs/) (via rustup)
-- [Bun](https://bun.sh/)
-
-## Getting Started
-
-1. **Install dependencies:**
-   ```bash
-   bun install
-   ```
-
-2. **Run development server:**
-   ```bash
-   bun run tauri dev
-   ```
-
-## Platform-Specific Setup
-
-### iOS
-
-Requires macOS with the following:
-
-- [Xcode](https://apps.apple.com/app/xcode/id497799835) (from Mac App Store)
-- Cocoapods: `brew install cocoapods`
-- iOS Rust targets:
-  ```bash
-  rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
-  ```
-- Switch to full Xcode:
-  ```bash
-  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-  ```
-
-Run on iOS:
 ```bash
-bun run tauri ios init
-bun run tauri ios dev
-```
+# Install dependencies
+bun install
 
-### Android
+# Start development server
+bun run dev
 
-See [Tauri Android Prerequisites](https://v2.tauri.app/start/prerequisites/#android) for setup instructions.
+# Build for production
+bun run build
 
-Run on Android:
-```bash
-bun run tauri android init
-bun run tauri android dev
+# Preview production build
+bun run preview
+
+# Lint
+bun run lint
 ```
 
 ## Project Structure
 
 ```
-├── src/                  # React frontend
-│   ├── App.tsx          # Main component
-│   ├── main.tsx         # Entry point
-│   └── index.css        # Tailwind CSS
-├── src-tauri/           # Rust backend
-│   ├── src/             # Rust source
-│   ├── Cargo.toml       # Rust dependencies
-│   └── tauri.conf.json  # Tauri configuration
-├── package.json
-└── vite.config.ts
+src/
+├── App.tsx                   # Root component, navigation, global state
+├── components/
+│   ├── Dashboard.tsx         # HOME - calendar, streaks
+│   ├── WorkoutLog.tsx        # LOG - workout execution
+│   ├── PlanManager.tsx       # PLAN - create/edit plans
+│   ├── AICoach.tsx           # AI COACH - chat interface
+│   └── AISettingsModal.tsx   # AI provider configuration
+├── services/
+│   ├── storageService.ts     # localStorage wrapper
+│   └── aiService.ts          # Multi-provider AI integration
+├── types.ts                  # TypeScript interfaces
+├── constants.ts              # Initial seed data
+└── translations.ts           # i18n strings (zh/en)
 ```
 
 ## License

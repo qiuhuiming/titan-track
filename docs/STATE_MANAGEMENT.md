@@ -2,7 +2,7 @@
 
 ## Global State (App.tsx)
 ```typescript
-// Location: src/App.tsx, lines 33-42
+// Location: src/App.tsx
 const [activeTab, setActiveTab] = useState<TabType>(TabType.DASHBOARD);
 const [activeTabParams, setActiveTabParams] = useState<NavigationParams | null>(null);
 const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -12,6 +12,7 @@ const [language, setLanguage] = useState<Language>('zh');
 const [isLoading, setIsLoading] = useState(true);
 const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false);
+const [aiSettings, setAISettings] = useState<AISettings | null>(null);
 ```
 
 ## State Update Pattern
@@ -28,13 +29,9 @@ const handleAddLog = (newLog: WorkoutEntry) => {
 ### Parent Updates State + Persists
 ```typescript
 // Location: src/App.tsx
-const handleUpdateLogs = async (newLogs: WorkoutEntry[]) => {
+const handleUpdateLogs = (newLogs: WorkoutEntry[]) => {
   setLogs(newLogs);  // React state update
-  try {
-    await tauriStorageService.saveLogs(newLogs);  // Persist to backend
-  } catch (error) {
-    console.error('Failed to save logs:', error);
-  }
+  storageService.saveLogs(newLogs);  // Persist to localStorage
 };
 ```
 
@@ -43,8 +40,8 @@ const handleUpdateLogs = async (newLogs: WorkoutEntry[]) => {
 ### Global Data State (Managed in App.tsx)
 Use when:
 - Data is shared across multiple components
-- Data persists to Tauri storage
-- Examples: exercises, logs, plans, language
+- Data persists to localStorage
+- Examples: exercises, logs, plans, aiSettings
 
 ### Local UI State (Managed in Components)
 Use when:
@@ -55,32 +52,23 @@ Use when:
 ### User Preferences (localStorage)
 Use when:
 - Small, user-specific settings
-- Not needed in backend
 - Examples: language preference, UI preferences
 
 ## State Initialization Flow
 ```typescript
-// Location: src/App.tsx, lines 44-67
+// Location: src/App.tsx
 useEffect(() => {
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [loadedExercises, loadedLogs, loadedPlans] = await Promise.all([
-        tauriStorageService.getExercises(),
-        tauriStorageService.getLogs(),
-        tauriStorageService.getPlans(),
-      ]);
-      setExercises(loadedExercises);
-      setLogs(loadedLogs);
-      setPlans(loadedPlans);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  void loadData();
+  try {
+    setIsLoading(true);
+    setExercises(storageService.getExercises());
+    setLogs(storageService.getLogs());
+    setPlans(storageService.getPlans());
+    setAISettings(storageService.getAISettings());
+  } catch (error) {
+    console.error('Failed to load data:', error);
+  } finally {
+    setIsLoading(false);
+  }
 
   // Load language preference from localStorage
   const savedLang = localStorage.getItem('titan_track_lang');
@@ -106,6 +94,7 @@ const t = translations[language];
 // Settings menu state
 const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false);
+const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
 
 // ESC key and click-outside handlers are set up via useEffect
 // Body scroll is disabled when modals are open
@@ -148,7 +137,7 @@ onUpdateExercises([...exercises, newExercise]);
 ### Updating an Item
 ```typescript
 // Pattern: map with immutable update
-const updatedLogs = logs.map(log => 
+const updatedLogs = logs.map(log =>
   log.id === logId ? { ...log, ...updates } : log
 );
 onUpdateLogs(updatedLogs);
@@ -184,8 +173,8 @@ if (isLoading) {
 // Example: AICoach.tsx
 const [loading, setLoading] = useState(false);
 
-<button onClick={handleAnalysis} disabled={loading}>
-  {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-  {loading ? 'Processing...' : 'Generate Analysis'}
+<button onClick={handleSend} disabled={loading}>
+  {loading ? <Loader2 className="animate-spin" /> : <Send />}
+  {loading ? 'Sending...' : 'Send'}
 </button>
 ```

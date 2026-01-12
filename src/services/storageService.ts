@@ -1,10 +1,11 @@
 import { INITIAL_EXERCISES } from '../constants'
-import type { Exercise, WorkoutEntry, WorkoutPlan } from '../types'
+import type { AISettings, Exercise, WorkoutEntry, WorkoutPlan } from '../types'
 
 const STORAGE_KEYS = {
   EXERCISES: 'titan_track_exercises',
   LOGS: 'titan_track_logs',
   PLANS: 'titan_track_plans',
+  AI_SETTINGS: 'titan_track_ai_settings',
 }
 
 export const storageService = {
@@ -30,5 +31,12 @@ export const storageService = {
   },
   savePlans: (plans: WorkoutPlan[]) => {
     localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(plans))
+  },
+  getAISettings: (): AISettings | null => {
+    const data = localStorage.getItem(STORAGE_KEYS.AI_SETTINGS)
+    return data ? (JSON.parse(data) as AISettings) : null
+  },
+  saveAISettings: (settings: AISettings) => {
+    localStorage.setItem(STORAGE_KEYS.AI_SETTINGS, JSON.stringify(settings))
   },
 }
