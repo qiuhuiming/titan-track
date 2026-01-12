@@ -66,7 +66,6 @@ async def create_entry(
     entry = WorkoutEntry(
         **entry_in.model_dump(),
         user_id=current_user.id,
-        version=1,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -101,7 +100,6 @@ async def update_entry(
     for field, value in update_data.items():
         setattr(entry, field, value)
 
-    entry.version += 1
     entry.updated_at = datetime.utcnow()
 
     await db.commit()
@@ -130,7 +128,6 @@ async def delete_entry(
 
     entry.is_deleted = True
     entry.deleted_at = datetime.utcnow()
-    entry.version += 1
     entry.updated_at = datetime.utcnow()
 
     await db.commit()

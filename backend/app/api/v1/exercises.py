@@ -66,7 +66,6 @@ async def create_exercise(
     exercise = Exercise(
         **exercise_in.model_dump(),
         user_id=current_user.id,
-        version=1,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -101,7 +100,6 @@ async def update_exercise(
     for field, value in update_data.items():
         setattr(exercise, field, value)
 
-    exercise.version += 1
     exercise.updated_at = datetime.utcnow()
 
     await db.commit()
@@ -130,7 +128,6 @@ async def delete_exercise(
 
     exercise.is_deleted = True
     exercise.deleted_at = datetime.utcnow()
-    exercise.version += 1
     exercise.updated_at = datetime.utcnow()
 
     await db.commit()

@@ -7,9 +7,11 @@ import { translations } from '../translations'
 interface PlanManagerProps {
   plans: WorkoutPlan[]
   exercises: Exercise[]
-  onUpdatePlans: (plans: WorkoutPlan[]) => void
   language: Language
   initialParams?: NavigationParams | null
+  onCreatePlan: (plan: WorkoutPlan) => Promise<void>
+  onUpdatePlan: (id: string, updates: Partial<Omit<WorkoutPlan, 'id'>>) => Promise<void>
+  onDeletePlan: (id: string) => Promise<void>
 }
 
 const PLANS_PER_PAGE = 5
@@ -29,9 +31,11 @@ type PlanFormState = Partial<WorkoutPlan> & {
 const PlanManager: React.FC<PlanManagerProps> = ({
   plans,
   exercises,
-  onUpdatePlans,
   language,
   initialParams,
+  onCreatePlan,
+  onUpdatePlan,
+  onDeletePlan,
 }) => {
   const t = translations[language]
   const [isAdding, setIsAdding] = useState(false)
@@ -51,6 +55,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     tags: [],
     exercises: [],
   })
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (initialParams?.date) {
@@ -208,7 +213,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     setExpandedPlanId(null)
   }
 
-  const handleSavePlan = (e: React.FormEvent) => {
+  const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault()
     const planTitle = newPlan.title
     const planDate = newPlan.date
@@ -216,41 +221,46 @@ const PlanManager: React.FC<PlanManagerProps> = ({
 
     if (!planTitle || !planDate || !planExercises || planExercises.length === 0) return
 
-    const expandedExercises = planExercises.map((exercise) => ({
-      exerciseId: exercise.exerciseId,
-      sets: expandSetGroups(exercise.sets),
-    }))
+    setIsSaving(true)
+    try {
+      const expandedExercises = planExercises.map((exercise) => ({
+        exerciseId: exercise.exerciseId,
+        sets: expandSetGroups(exercise.sets),
+      }))
 
-    if (editingPlanId) {
-      const updatedPlans = plans.map((plan) =>
-        plan.id === editingPlanId
-          ? {
-              ...plan,
-              date: planDate,
-              title: planTitle,
-              tags: newPlan.tags || [],
-              exercises: expandedExercises,
-              createdAt: plan.createdAt ?? new Date().toISOString(),
-            }
-          : plan
-      )
-      onUpdatePlans(updatedPlans)
-    } else {
-      const plan: WorkoutPlan = {
-        id: Math.random().toString(36).slice(2, 9),
-        date: planDate,
-        title: planTitle,
-        tags: newPlan.tags || [],
-        exercises: expandedExercises,
-        isCompleted: false,
-        createdAt: new Date().toISOString(),
+      if (editingPlanId) {
+        await onUpdatePlan(editingPlanId, {
+          date: planDate,
+          title: planTitle,
+          tags: newPlan.tags || [],
+          exercises: expandedExercises,
+        })
+      } else {
+        const plan: WorkoutPlan = {
+          id: crypto.randomUUID(),
+          date: planDate,
+          title: planTitle,
+          tags: newPlan.tags || [],
+          exercises: expandedExercises,
+          isCompleted: false,
+          createdAt: new Date().toISOString(),
+        }
+        await onCreatePlan(plan)
       }
-      onUpdatePlans([...plans, plan])
-    }
 
-    setIsAdding(false)
-    setEditingPlanId(null)
-    setNewPlan({ date: new Date().toISOString().split('T')[0], title: '', tags: [], exercises: [] })
+      setIsAdding(false)
+      setEditingPlanId(null)
+      setNewPlan({
+        date: new Date().toISOString().split('T')[0],
+        title: '',
+        tags: [],
+        exercises: [],
+      })
+    } catch (error) {
+      console.error('Failed to save plan:', error)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const addExerciseToPlan = () => {
@@ -273,9 +283,13 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     setNewPlan({ ...newPlan, exercises: updated })
   }
 
-  const removePlan = (id: string) => {
+  const removePlan = async (id: string) => {
     if (confirm(t.confirm_delete)) {
-      onUpdatePlans(plans.filter((p) => p.id !== id))
+      try {
+        await onDeletePlan(id)
+      } catch (error) {
+        console.error('Failed to delete plan:', error)
+      }
     }
   }
 
@@ -408,7 +422,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                removePlan(plan.id)
+                void removePlan(plan.id)
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-500 transition-transform active:scale-95"
             >
@@ -455,7 +469,11 @@ const PlanManager: React.FC<PlanManagerProps> = ({
               <div className="w-10"></div>
             </div>
 
-            <form id="plan-form" onSubmit={handleSavePlan} className="flex min-h-0 flex-1 flex-col">
+            <form
+              id="plan-form"
+              onSubmit={(e) => void handleSavePlan(e)}
+              className="flex min-h-0 flex-1 flex-col"
+            >
               <div
                 className="flex-1 space-y-6 overflow-y-auto p-6"
                 style={{ WebkitOverflowScrolling: 'touch' }}
@@ -695,9 +713,10 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-[2] rounded-2xl bg-indigo-600 p-4 text-xs font-black text-white uppercase shadow-lg transition-transform active:scale-95"
+                  disabled={isSaving}
+                  className="flex-[2] rounded-2xl bg-indigo-600 p-4 text-xs font-black text-white uppercase shadow-lg transition-transform active:scale-95 disabled:opacity-50"
                 >
-                  {editingPlanId ? t.update_plan : t.save_plan}
+                  {isSaving ? '...' : editingPlanId ? t.update_plan : t.save_plan}
                 </button>
               </div>
             </form>

@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js'
 import {
   Activity,
+  AlertCircle,
   Bot,
   CalendarDays,
   Dumbbell,
@@ -23,10 +24,9 @@ import Dashboard from './components/Dashboard'
 import ExerciseManager from './components/ExerciseManager'
 import PlanManager from './components/PlanManager'
 import WorkoutLog from './components/WorkoutLog'
-import { INITIAL_EXERCISES } from './constants'
 import { authService } from './services/authService'
+import { dataService } from './services/dataService'
 import { storageService } from './services/storageService'
-import { syncService } from './services/syncService'
 import { translations } from './translations'
 import {
   type AISettings,
@@ -46,6 +46,8 @@ const App: FC = () => {
   const [plans, setPlans] = useState<WorkoutPlan[]>([])
   const [language, setLanguage] = useState<Language>('zh')
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isExerciseManagerOpen, setIsExerciseManagerOpen] = useState(false)
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false)
@@ -56,93 +58,87 @@ const App: FC = () => {
   // Auth state
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
-  // Reload data from localStorage (after sync)
-  const reloadData = useCallback(() => {
-    setExercises(storageService.getExercises())
-    setLogs(storageService.getLogs())
-    setPlans(storageService.getPlans())
-  }, [])
+  const t = translations[language]
 
-  // Sync with server
-  const handleSync = useCallback(async () => {
-    if (!session) return
-    setIsSyncing(true)
-    try {
-      const result = await syncService.sync()
-      if (result.success) {
-        reloadData()
-      }
-    } finally {
-      setIsSyncing(false)
+  // Load data from API
+  const loadData = useCallback(async () => {
+    if (!session) {
+      setExercises([])
+      setLogs([])
+      setPlans([])
+      setIsLoading(false)
+      return
     }
-  }, [session, reloadData])
 
-  // Initial data load
-  useEffect(() => {
     try {
-      setIsLoading(true)
-      setExercises(storageService.getExercises())
-      setLogs(storageService.getLogs())
-      setPlans(storageService.getPlans())
-      setAISettings(storageService.getAISettings())
-    } catch (error) {
-      console.error('Failed to load data:', error)
+      setError(null)
+      const data = await dataService.fetchAllData()
+      setExercises(data.exercises)
+      setPlans(data.plans)
+      setLogs(data.entries)
+    } catch (err) {
+      console.error('Failed to load data:', err)
+      setError('Failed to load data. Please try again.')
     } finally {
       setIsLoading(false)
     }
+  }, [session])
 
-    const savedLang = localStorage.getItem('titan_track_lang')
-    if (savedLang === 'zh' || savedLang === 'en') setLanguage(savedLang)
-  }, [])
+  // Refresh data
+  const handleRefresh = useCallback(async () => {
+    if (!session || isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      const data = await dataService.fetchAllData()
+      setExercises(data.exercises)
+      setPlans(data.plans)
+      setLogs(data.entries)
+      setError(null)
+    } catch (err) {
+      console.error('Failed to refresh data:', err)
+      setError('Failed to refresh data.')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [session, isRefreshing])
 
-  // Auth state listener
+  // Initial auth check
   useEffect(() => {
-    // Get initial session
     void authService.getSession().then(({ data }) => {
       setSession(data.session)
       setUser(data.session?.user ?? null)
+      setAuthLoading(false)
     })
 
-    // Listen for auth changes
     const { data } = authService.onAuthStateChange((newSession) => {
       setSession(newSession)
       setUser(newSession?.user ?? null)
-
-      // Sync when user logs in
-      if (newSession) {
-        void syncService.sync().then((result) => {
-          if (result.success) reloadData()
-        })
-      }
+      setAuthLoading(false)
     })
 
     return () => {
       data.subscription.unsubscribe()
     }
-  }, [reloadData])
+  }, [])
 
-  // Sync on app startup and when coming online
+  // Load data when session changes
   useEffect(() => {
-    if (!session) return
-
-    // Initial sync
-    if (syncService.needsSync()) {
-      void handleSync()
+    if (!authLoading) {
+      setIsLoading(true)
+      void loadData()
     }
+  }, [session, authLoading, loadData])
 
-    // Sync when coming online
-    const handleOnline = () => {
-      void handleSync()
-    }
-    window.addEventListener('online', handleOnline)
+  // Load local preferences
+  useEffect(() => {
+    setAISettings(storageService.getAISettings())
+    const savedLang = storageService.getLanguage()
+    setLanguage(savedLang)
+  }, [])
 
-    return () => {
-      window.removeEventListener('online', handleOnline)
-    }
-  }, [session, handleSync])
-
+  // Escape key and click outside for settings
   useEffect(() => {
     if (!isSettingsOpen) return
 
@@ -189,26 +185,7 @@ const App: FC = () => {
   const handleLanguageToggle = () => {
     const nextLang = language === 'zh' ? 'en' : 'zh'
     setLanguage(nextLang)
-    localStorage.setItem('titan_track_lang', nextLang)
-  }
-
-  const t = translations[language]
-
-  const handleClearAllData = () => {
-    if (!window.confirm(t.confirm_clear_all)) return
-
-    try {
-      storageService.saveExercises(INITIAL_EXERCISES, false)
-      storageService.saveLogs([], false)
-      storageService.savePlans([], false)
-      setExercises(INITIAL_EXERCISES)
-      setLogs([])
-      setPlans([])
-    } catch (error) {
-      console.error('Failed to clear data:', error)
-    } finally {
-      setIsSettingsOpen(false)
-    }
+    storageService.saveLanguage(nextLang)
   }
 
   const handleLogin = () => {
@@ -218,27 +195,105 @@ const App: FC = () => {
 
   const handleLogout = () => {
     setIsSettingsOpen(false)
-    syncService.clearSyncData()
+    storageService.clearLegacyData()
     void authService.signOut()
   }
 
-  const handleUpdateExercises = (newExercises: Exercise[]) => {
-    setExercises(newExercises)
-    storageService.saveExercises(newExercises)
+  // Exercise CRUD handlers
+  const handleCreateExercise = async (exercise: Exercise) => {
+    try {
+      const created = await dataService.createExercise(exercise)
+      setExercises((prev) => [...prev, created])
+    } catch (err) {
+      console.error('Failed to create exercise:', err)
+      throw err
+    }
+  }
+
+  const handleUpdateExercise = async (id: string, updates: Partial<Omit<Exercise, 'id'>>) => {
+    try {
+      const updated = await dataService.updateExercise(id, updates)
+      setExercises((prev) => prev.map((e) => (e.id === id ? updated : e)))
+    } catch (err) {
+      console.error('Failed to update exercise:', err)
+      throw err
+    }
+  }
+
+  const handleDeleteExercise = async (id: string) => {
+    try {
+      await dataService.deleteExercise(id)
+      setExercises((prev) => prev.filter((e) => e.id !== id))
+    } catch (err) {
+      console.error('Failed to delete exercise:', err)
+      throw err
+    }
+  }
+
+  // Plan CRUD handlers
+  const handleCreatePlan = async (plan: WorkoutPlan) => {
+    try {
+      const created = await dataService.createPlan(plan)
+      setPlans((prev) => [...prev, created])
+    } catch (err) {
+      console.error('Failed to create plan:', err)
+      throw err
+    }
+  }
+
+  const handleUpdatePlan = async (id: string, updates: Partial<Omit<WorkoutPlan, 'id'>>) => {
+    try {
+      const updated = await dataService.updatePlan(id, updates)
+      setPlans((prev) => prev.map((p) => (p.id === id ? updated : p)))
+    } catch (err) {
+      console.error('Failed to update plan:', err)
+      throw err
+    }
+  }
+
+  const handleDeletePlan = async (id: string) => {
+    try {
+      await dataService.deletePlan(id)
+      setPlans((prev) => prev.filter((p) => p.id !== id))
+    } catch (err) {
+      console.error('Failed to delete plan:', err)
+      throw err
+    }
+  }
+
+  // Entry CRUD handlers
+  const handleCreateEntry = async (entry: WorkoutEntry) => {
+    try {
+      const created = await dataService.createEntry(entry)
+      setLogs((prev) => [...prev, created])
+    } catch (err) {
+      console.error('Failed to create entry:', err)
+      throw err
+    }
+  }
+
+  const handleUpdateEntry = async (id: string, updates: Partial<Omit<WorkoutEntry, 'id'>>) => {
+    try {
+      const updated = await dataService.updateEntry(id, updates)
+      setLogs((prev) => prev.map((e) => (e.id === id ? updated : e)))
+    } catch (err) {
+      console.error('Failed to update entry:', err)
+      throw err
+    }
+  }
+
+  const handleDeleteEntry = async (id: string) => {
+    try {
+      await dataService.deleteEntry(id)
+      setLogs((prev) => prev.filter((e) => e.id !== id))
+    } catch (err) {
+      console.error('Failed to delete entry:', err)
+      throw err
+    }
   }
 
   const handleCloseExerciseManager = () => {
     setIsExerciseManagerOpen(false)
-  }
-
-  const handleUpdateLogs = (newLogs: WorkoutEntry[]) => {
-    setLogs(newLogs)
-    storageService.saveLogs(newLogs)
-  }
-
-  const handleUpdatePlans = (newPlans: WorkoutPlan[]) => {
-    setPlans(newPlans)
-    storageService.savePlans(newPlans)
   }
 
   const handleSaveAISettings = (newSettings: AISettings) => {
@@ -258,12 +313,84 @@ const App: FC = () => {
     { id: TabType.AI_COACH, label: t.ai_coach, icon: Sparkles },
   ]
 
-  if (isLoading) {
+  // Auth loading state
+  if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
           <p className="text-sm font-bold tracking-widest text-slate-400 uppercase">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Require login
+  if (!session && authService.isConfigured()) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-white p-6">
+        <div className="mb-8 flex items-center space-x-3">
+          <div className="rounded-xl bg-indigo-600 p-3 shadow-lg shadow-indigo-200">
+            <Activity className="text-white" size={32} />
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">
+            Titan<span className="text-indigo-600">Track</span>
+          </h1>
+        </div>
+        <div className="w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-8 shadow-xl">
+          <h2 className="mb-2 text-center text-xl font-bold text-slate-900">Welcome Back</h2>
+          <p className="mb-6 text-center text-sm text-slate-500">Sign in to access your workouts</p>
+          <button
+            type="button"
+            onClick={handleLogin}
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 py-3 font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-xl active:scale-[0.98]"
+          >
+            <LogIn size={20} />
+            Sign in with Google
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={handleLanguageToggle}
+          className="mt-6 flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+        >
+          <Globe size={16} />
+          {language === 'zh' ? 'English' : '中文'}
+        </button>
+      </div>
+    )
+  }
+
+  // Data loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+          <p className="text-sm font-bold tracking-widest text-slate-400 uppercase">
+            Loading your data...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-6">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h2 className="text-lg font-bold text-slate-900">Something went wrong</h2>
+          <p className="text-sm text-slate-500">{error}</p>
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:bg-indigo-700"
+          >
+            <RefreshCw size={18} />
+            Try Again
+          </button>
         </div>
       </div>
     )
@@ -332,44 +459,29 @@ const App: FC = () => {
                 className="animate-in zoom-in-95 fade-in absolute bottom-full left-0 z-50 mb-2 w-full rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl duration-200"
               >
                 {/* Auth buttons */}
-                {authService.isConfigured() && (
+                {authService.isConfigured() && user && (
                   <>
-                    {user ? (
-                      <>
-                        <div className="truncate px-3 py-2 text-xs text-slate-500">
-                          {user.email}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleSync()}
-                          disabled={isSyncing}
-                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
-                        >
-                          <RefreshCw
-                            size={18}
-                            className={`text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`}
-                          />
-                          <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleLogout}
-                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
-                        >
-                          <LogOut size={18} className="text-slate-400" />
-                          <span>Sign Out</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleLogin}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
-                      >
-                        <LogIn size={18} className="text-indigo-500" />
-                        <span>Sign in with Google</span>
-                      </button>
-                    )}
+                    <div className="truncate px-3 py-2 text-xs text-slate-500">{user.email}</div>
+                    <button
+                      type="button"
+                      onClick={() => void handleRefresh()}
+                      disabled={isRefreshing}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        size={18}
+                        className={`text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`}
+                      />
+                      <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                    >
+                      <LogOut size={18} className="text-slate-400" />
+                      <span>Sign Out</span>
+                    </button>
                     <div className="my-2 border-t border-slate-100" />
                   </>
                 )}
@@ -395,13 +507,6 @@ const App: FC = () => {
                 >
                   <Dumbbell size={18} className="text-indigo-500" />
                   <span>{t.manage_exercises}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAllData}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-rose-600 transition-all hover:bg-rose-50"
-                >
-                  {t.clear_all_data}
                 </button>
               </div>
             )}
@@ -447,48 +552,33 @@ const App: FC = () => {
                 </div>
 
                 {/* Auth buttons */}
-                {authService.isConfigured() && (
+                {authService.isConfigured() && user && (
                   <>
-                    {user ? (
-                      <>
-                        <div className="truncate px-3 py-2 text-[10px] text-slate-500">
-                          {user.email}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleSync()}
-                          disabled={isSyncing}
-                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
-                        >
-                          <RefreshCw
-                            size={18}
-                            className={`text-emerald-500 group-hover:text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`}
-                          />
-                          <span className="text-[11px] tracking-widest uppercase">
-                            {isSyncing ? 'Syncing...' : 'Sync Now'}
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleLogout}
-                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-slate-100"
-                        >
-                          <LogOut size={18} className="text-slate-400" />
-                          <span className="text-[11px] tracking-widest uppercase">Sign Out</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleLogin}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
-                      >
-                        <LogIn size={18} className="text-indigo-500 group-hover:text-indigo-600" />
-                        <span className="text-[11px] tracking-widest uppercase">
-                          Sign in with Google
-                        </span>
-                      </button>
-                    )}
+                    <div className="truncate px-3 py-2 text-[10px] text-slate-500">
+                      {user.email}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleRefresh()}
+                      disabled={isRefreshing}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        size={18}
+                        className={`text-emerald-500 group-hover:text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`}
+                      />
+                      <span className="text-[11px] tracking-widest uppercase">
+                        {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-slate-100"
+                    >
+                      <LogOut size={18} className="text-slate-400" />
+                      <span className="text-[11px] tracking-widest uppercase">Sign Out</span>
+                    </button>
                     <div className="my-2 border-t border-slate-100" />
                   </>
                 )}
@@ -517,13 +607,6 @@ const App: FC = () => {
                     {t.manage_exercises}
                   </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleClearAllData}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-rose-600 transition-all hover:bg-rose-50"
-                >
-                  {t.clear_all_data}
-                </button>
               </div>
             )}
           </div>
@@ -544,20 +627,24 @@ const App: FC = () => {
           {activeTab === TabType.WORKOUT_LOG && (
             <WorkoutLog
               logs={logs}
-              onUpdateLogs={handleUpdateLogs}
               exercises={exercises}
               plans={plans}
-              onUpdatePlans={handleUpdatePlans}
               language={language}
+              onCreateEntry={handleCreateEntry}
+              onUpdateEntry={handleUpdateEntry}
+              onDeleteEntry={handleDeleteEntry}
+              onUpdatePlan={handleUpdatePlan}
             />
           )}
           {activeTab === TabType.PLAN && (
             <PlanManager
               plans={plans}
               exercises={exercises}
-              onUpdatePlans={handleUpdatePlans}
               language={language}
               initialParams={activeTabParams}
+              onCreatePlan={handleCreatePlan}
+              onUpdatePlan={handleUpdatePlan}
+              onDeletePlan={handleDeletePlan}
             />
           )}
           {activeTab === TabType.AI_COACH && (
@@ -598,8 +685,10 @@ const App: FC = () => {
             <div className="flex-1 overflow-y-auto p-6 md:p-8">
               <ExerciseManager
                 exercises={exercises}
-                onUpdateExercises={handleUpdateExercises}
                 language={language}
+                onCreateExercise={handleCreateExercise}
+                onUpdateExercise={handleUpdateExercise}
+                onDeleteExercise={handleDeleteExercise}
               />
             </div>
           </div>

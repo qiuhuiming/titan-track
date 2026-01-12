@@ -1,5 +1,4 @@
 from app.schemas.exercise import ExerciseCreate, ExerciseResponse, ExerciseUpdate
-from app.schemas.sync import SyncConflict, SyncRequest, SyncResponse
 from app.schemas.user import UserResponse
 from app.schemas.workout_entry import (
     WorkoutEntryCreate,
@@ -23,7 +22,4 @@ __all__ = [
     "WorkoutEntryCreate",
     "WorkoutEntryUpdate",
     "WorkoutEntryResponse",
-    "SyncRequest",
-    "SyncResponse",
-    "SyncConflict",
 ]

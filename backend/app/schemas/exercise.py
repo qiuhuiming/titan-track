@@ -28,7 +28,6 @@ class ExerciseUpdate(BaseModel):
 class ExerciseResponse(ExerciseBase):
     id: str
     user_id: str
-    version: int
     updated_at: datetime
     created_at: datetime
     is_deleted: bool

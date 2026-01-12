@@ -66,7 +66,6 @@ async def create_plan(
     plan = WorkoutPlan(
         **plan_in.model_dump(),
         user_id=current_user.id,
-        version=1,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -101,7 +100,6 @@ async def update_plan(
     for field, value in update_data.items():
         setattr(plan, field, value)
 
-    plan.version += 1
     plan.updated_at = datetime.utcnow()
 
     await db.commit()
@@ -130,7 +128,6 @@ async def delete_plan(
 
     plan.is_deleted = True
     plan.deleted_at = datetime.utcnow()
-    plan.version += 1
     plan.updated_at = datetime.utcnow()
 
     await db.commit()

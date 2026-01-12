@@ -21,19 +21,26 @@ interface WorkoutLogProps {
   logs: WorkoutEntry[]
   exercises: Exercise[]
   plans: WorkoutPlan[]
-  onUpdateLogs: (logs: WorkoutEntry[]) => void
-  onUpdatePlans: (plans: WorkoutPlan[]) => void
   language: Language
+  onCreateEntry: (entry: WorkoutEntry) => Promise<void>
+  onUpdateEntry: (id: string, updates: Partial<Omit<WorkoutEntry, 'id'>>) => Promise<void>
+  onDeleteEntry: (id: string) => Promise<void>
+  onUpdatePlan: (id: string, updates: Partial<Omit<WorkoutPlan, 'id'>>) => Promise<void>
 }
 
 const WorkoutLog: FC<WorkoutLogProps> = ({
   logs,
   exercises,
   plans,
-  onUpdateLogs,
-  onUpdatePlans,
   language,
+  onCreateEntry,
+  onUpdateEntry,
+  onDeleteEntry,
+  onUpdatePlan,
 }) => {
+  // Note: onUpdateEntry and onDeleteEntry are available for future edit/delete functionality
+  void onUpdateEntry
+  void onDeleteEntry
   const t = translations[language]
   const [isAdding, setIsAdding] = useState(false)
 
@@ -65,13 +72,19 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
     return incompletePlans[incompletePlans.length - 1] ?? null
   }, [plans, todayStr])
 
-  const startLoggingPlan = (plan: WorkoutPlan, forceToday: boolean = false) => {
+  const [isSaving, setIsSaving] = useState(false)
+
+  const startLoggingPlan = async (plan: WorkoutPlan, forceToday: boolean = false) => {
     let targetPlan = plan
     if (forceToday && plan.date !== todayStr) {
       setActivePlanOriginalDate(plan.date)
-      const updatedPlans = plans.map((p) => (p.id === plan.id ? { ...p, date: todayStr } : p))
-      onUpdatePlans(updatedPlans)
-      targetPlan = { ...plan, date: todayStr }
+      try {
+        await onUpdatePlan(plan.id, { date: todayStr })
+        targetPlan = { ...plan, date: todayStr }
+      } catch (error) {
+        console.error('Failed to update plan date:', error)
+        return
+      }
     } else {
       setActivePlanOriginalDate(null)
     }
@@ -139,12 +152,13 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
     setPlanProgress(updatedProgress)
   }
 
-  const handleCancelLogging = () => {
+  const handleCancelLogging = async () => {
     if (activePlan && activePlanOriginalDate && activePlan.date !== activePlanOriginalDate) {
-      const updatedPlans = plans.map((p) =>
-        p.id === activePlan.id ? { ...p, date: activePlanOriginalDate } : p
-      )
-      onUpdatePlans(updatedPlans)
+      try {
+        await onUpdatePlan(activePlan.id, { date: activePlanOriginalDate })
+      } catch (error) {
+        console.error('Failed to restore plan date:', error)
+      }
     }
     setIsAdding(false)
     setActivePlan(null)
@@ -152,44 +166,57 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
     setActivePlanOriginalDate(null)
   }
 
-  const handleCompletePlan = () => {
+  const handleCompletePlan = async () => {
     if (!activePlan) return
 
-    // Only log exercises that weren't skipped and have at least one completed set
-    const logsToSave: WorkoutEntry[] = planProgress
-      .filter((p) => !p.skipped)
-      .map((p) => ({
-        id: Math.random().toString(36).substring(2, 11),
-        date: activePlan.date,
-        exerciseId: p.exerciseId,
-        workoutType: activePlan.title,
-        sets: p.sets,
-        planId: activePlan.id,
-      }))
+    setIsSaving(true)
+    try {
+      // Only log exercises that weren't skipped and have at least one completed set
+      const logsToSave: WorkoutEntry[] = planProgress
+        .filter((p) => !p.skipped)
+        .map((p) => ({
+          id: crypto.randomUUID(),
+          date: activePlan.date,
+          exerciseId: p.exerciseId,
+          workoutType: activePlan.title,
+          sets: p.sets,
+          planId: activePlan.id,
+        }))
 
-    if (logsToSave.length > 0) {
-      onUpdateLogs([...logs, ...logsToSave])
+      // Create all entries
+      for (const entry of logsToSave) {
+        await onCreateEntry(entry)
+      }
+
+      // Mark plan as completed
+      await onUpdatePlan(activePlan.id, { isCompleted: true })
+
+      setIsAdding(false)
+      setActivePlan(null)
+      setPlanProgress([])
+      setActivePlanOriginalDate(null)
+    } catch (error) {
+      console.error('Failed to complete plan:', error)
+    } finally {
+      setIsSaving(false)
     }
-
-    const updatedPlans = plans.map((p) =>
-      p.id === activePlan.id ? { ...p, isCompleted: true } : p
-    )
-    onUpdatePlans(updatedPlans)
-
-    setIsAdding(false)
-    setActivePlan(null)
-    setPlanProgress([])
-    setActivePlanOriginalDate(null)
   }
 
-  const handleManualSubmit = (e: React.FormEvent) => {
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newEntry: WorkoutEntry = {
-      id: Math.random().toString(36).substring(2, 11),
-      ...formData,
+    setIsSaving(true)
+    try {
+      const newEntry: WorkoutEntry = {
+        id: crypto.randomUUID(),
+        ...formData,
+      }
+      await onCreateEntry(newEntry)
+      setIsAdding(false)
+    } catch (error) {
+      console.error('Failed to save workout:', error)
+    } finally {
+      setIsSaving(false)
     }
-    onUpdateLogs([...logs, newEntry])
-    setIsAdding(false)
   }
 
   return (
@@ -236,7 +263,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        startLoggingPlan(upcomingPlan, upcomingPlan.date !== todayStr)
+                        void startLoggingPlan(upcomingPlan, upcomingPlan.date !== todayStr)
                       }}
                       disabled={!hasExercises}
                       className={`flex flex-1 items-center justify-center gap-3 rounded-2xl px-6 py-4 font-black shadow-lg transition-all active:scale-95 ${hasExercises ? 'bg-indigo-600 text-white shadow-indigo-900/20 hover:bg-indigo-500' : 'cursor-not-allowed bg-slate-700/40 text-slate-300 shadow-none'}`}
@@ -331,7 +358,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
             <div className="pt-safe flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <button
                 type="button"
-                onClick={handleCancelLogging}
+                onClick={() => void handleCancelLogging()}
                 className="rounded-xl bg-slate-50 p-2 text-slate-400"
               >
                 <X size={24} />
@@ -692,11 +719,15 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
             <div className="fixed right-0 bottom-0 left-0 border-t border-slate-100 bg-white/80 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] backdrop-blur-lg">
               <button
                 type="button"
-                onClick={activePlan ? handleCompletePlan : handleManualSubmit}
-                disabled={!hasExercises}
-                className={`w-full rounded-[2rem] py-5 text-sm font-black tracking-widest uppercase shadow-2xl transition-transform active:scale-95 ${hasExercises ? 'bg-indigo-600 text-white shadow-indigo-100' : 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-none'}`}
+                onClick={
+                  activePlan
+                    ? () => void handleCompletePlan()
+                    : (e) => void handleManualSubmit(e as unknown as React.FormEvent)
+                }
+                disabled={!hasExercises || isSaving}
+                className={`w-full rounded-[2rem] py-5 text-sm font-black tracking-widest uppercase shadow-2xl transition-transform active:scale-95 ${hasExercises && !isSaving ? 'bg-indigo-600 text-white shadow-indigo-100' : 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-none'}`}
               >
-                {activePlan ? t.complete_plan : t.save_workout}
+                {isSaving ? '...' : activePlan ? t.complete_plan : t.save_workout}
               </button>
             </div>
           </div>,

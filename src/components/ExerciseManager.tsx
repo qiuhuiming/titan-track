@@ -6,8 +6,10 @@ import type { Exercise, Language, MuscleGroup } from '../types'
 
 interface ExerciseManagerProps {
   exercises: Exercise[]
-  onUpdateExercises: (exercises: Exercise[]) => void
   language: Language
+  onCreateExercise: (exercise: Exercise) => Promise<void>
+  onUpdateExercise: (id: string, updates: Partial<Omit<Exercise, 'id'>>) => Promise<void>
+  onDeleteExercise: (id: string) => Promise<void>
 }
 
 const MUSCLE_GROUPS: MuscleGroup[] = [
@@ -21,7 +23,15 @@ const MUSCLE_GROUPS: MuscleGroup[] = [
   'Cardio',
 ]
 
-const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercises, language }) => {
+const ExerciseManager: FC<ExerciseManagerProps> = ({
+  exercises,
+  language,
+  onCreateExercise,
+  onUpdateExercise,
+  onDeleteExercise,
+}) => {
+  // Note: onUpdateExercise is available for future edit functionality
+  void onUpdateExercise
   const t = translations[language]
   const [searchTerm, setSearchTerm] = useState('')
   const [filterGroup, setFilterGroup] = useState<MuscleGroup | 'All'>('All')
@@ -59,20 +69,33 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
     return matchesSearch && matchesFilter
   })
 
-  const handleAdd = (e: FormEvent<HTMLFormElement>) => {
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleAdd = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const ex: Exercise = {
-      id: Math.random().toString(36).substring(2, 11),
-      ...newExercise,
+    setIsSaving(true)
+    try {
+      const ex: Exercise = {
+        id: crypto.randomUUID(),
+        ...newExercise,
+      }
+      await onCreateExercise(ex)
+      setIsAdding(false)
+      setNewExercise({ name: '', muscleGroup: 'Chest', equipment: '', notes: '' })
+    } catch (error) {
+      console.error('Failed to create exercise:', error)
+    } finally {
+      setIsSaving(false)
     }
-    onUpdateExercises([...exercises, ex])
-    setIsAdding(false)
-    setNewExercise({ name: '', muscleGroup: 'Chest', equipment: '', notes: '' })
   }
 
-  const deleteExercise = (id: string) => {
+  const deleteExercise = async (id: string) => {
     if (confirm(t.confirm_delete)) {
-      onUpdateExercises(exercises.filter((ex) => ex.id !== id))
+      try {
+        await onDeleteExercise(id)
+      } catch (error) {
+        console.error('Failed to delete exercise:', error)
+      }
     }
   }
 
@@ -125,7 +148,7 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
 
       {isAdding && (
         <div className="animate-in fade-in slide-in-from-top-2 space-y-6 rounded-[2rem] border border-slate-100 bg-slate-50/80 p-6 shadow-sm duration-300 md:p-8">
-          <form onSubmit={handleAdd} className="space-y-6">
+          <form onSubmit={(e) => void handleAdd(e)} className="space-y-6">
             <h3 className="text-2xl font-bold text-slate-900">{t.add_new_exercise}</h3>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -198,9 +221,10 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
               </button>
               <button
                 type="submit"
-                className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-bold text-white shadow-lg shadow-indigo-100 transition-colors hover:bg-indigo-700"
+                disabled={isSaving}
+                className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-bold text-white shadow-lg shadow-indigo-100 transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
-                {t.save_exercise}
+                {isSaving ? '...' : t.save_exercise}
               </button>
             </div>
           </form>
@@ -224,7 +248,7 @@ const ExerciseManager: FC<ExerciseManagerProps> = ({ exercises, onUpdateExercise
                 <button
                   type="button"
                   onClick={() => {
-                    deleteExercise(ex.id)
+                    void deleteExercise(ex.id)
                   }}
                   className="p-2 text-slate-400 hover:text-rose-600"
                 >
