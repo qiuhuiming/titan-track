@@ -1,3 +1,4 @@
+import type { Session, User } from '@supabase/supabase-js'
 import {
   Activity,
   Bot,
@@ -6,13 +7,16 @@ import {
   Globe,
   LayoutDashboard,
   Loader2,
+  LogIn,
+  LogOut,
   PlusCircle,
+  RefreshCw,
   Settings,
   Sparkles,
   X,
 } from 'lucide-react'
 import type { FC } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AICoach from './components/AICoach'
 import AISettingsModal from './components/AISettingsModal'
 import Dashboard from './components/Dashboard'
@@ -20,7 +24,9 @@ import ExerciseManager from './components/ExerciseManager'
 import PlanManager from './components/PlanManager'
 import WorkoutLog from './components/WorkoutLog'
 import { INITIAL_EXERCISES } from './constants'
+import { authService } from './services/authService'
 import { storageService } from './services/storageService'
+import { syncService } from './services/syncService'
 import { translations } from './translations'
 import {
   type AISettings,
@@ -46,6 +52,33 @@ const App: FC = () => {
   const [aiSettings, setAISettings] = useState<AISettings | null>(null)
   const settingsRef = useRef<HTMLDivElement | null>(null)
 
+  // Auth state
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Reload data from localStorage (after sync)
+  const reloadData = useCallback(() => {
+    setExercises(storageService.getExercises())
+    setLogs(storageService.getLogs())
+    setPlans(storageService.getPlans())
+  }, [])
+
+  // Sync with server
+  const handleSync = useCallback(async () => {
+    if (!session) return
+    setIsSyncing(true)
+    try {
+      const result = await syncService.sync()
+      if (result.success) {
+        reloadData()
+      }
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [session, reloadData])
+
+  // Initial data load
   useEffect(() => {
     try {
       setIsLoading(true)
@@ -62,6 +95,52 @@ const App: FC = () => {
     const savedLang = localStorage.getItem('titan_track_lang')
     if (savedLang === 'zh' || savedLang === 'en') setLanguage(savedLang)
   }, [])
+
+  // Auth state listener
+  useEffect(() => {
+    // Get initial session
+    void authService.getSession().then(({ data }) => {
+      setSession(data.session)
+      setUser(data.session?.user ?? null)
+    })
+
+    // Listen for auth changes
+    const { data } = authService.onAuthStateChange((newSession) => {
+      setSession(newSession)
+      setUser(newSession?.user ?? null)
+
+      // Sync when user logs in
+      if (newSession) {
+        void syncService.sync().then((result) => {
+          if (result.success) reloadData()
+        })
+      }
+    })
+
+    return () => {
+      data.subscription.unsubscribe()
+    }
+  }, [reloadData])
+
+  // Sync on app startup and when coming online
+  useEffect(() => {
+    if (!session) return
+
+    // Initial sync
+    if (syncService.needsSync()) {
+      void handleSync()
+    }
+
+    // Sync when coming online
+    const handleOnline = () => {
+      void handleSync()
+    }
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [session, handleSync])
 
   useEffect(() => {
     if (!isSettingsOpen) return
@@ -115,9 +194,9 @@ const App: FC = () => {
     if (!window.confirm(t.confirm_clear_all)) return
 
     try {
-      storageService.saveExercises(INITIAL_EXERCISES)
-      storageService.saveLogs([])
-      storageService.savePlans([])
+      storageService.saveExercises(INITIAL_EXERCISES, false)
+      storageService.saveLogs([], false)
+      storageService.savePlans([], false)
       setExercises(INITIAL_EXERCISES)
       setLogs([])
       setPlans([])
@@ -126,6 +205,17 @@ const App: FC = () => {
     } finally {
       setIsSettingsOpen(false)
     }
+  }
+
+  const handleLogin = () => {
+    setIsSettingsOpen(false)
+    void authService.signInWithGoogle()
+  }
+
+  const handleLogout = () => {
+    setIsSettingsOpen(false)
+    syncService.clearSyncData()
+    void authService.signOut()
   }
 
   const handleUpdateExercises = (newExercises: Exercise[]) => {
@@ -253,6 +343,54 @@ const App: FC = () => {
                 <div className="px-3 pt-2 pb-1 text-[11px] font-black tracking-[0.2em] text-slate-400 uppercase">
                   {t.settings}
                 </div>
+
+                {/* Auth buttons */}
+                {authService.isConfigured() && (
+                  <>
+                    {user ? (
+                      <>
+                        <div className="truncate px-3 py-2 text-[10px] text-slate-500">
+                          {user.email}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleSync()}
+                          disabled={isSyncing}
+                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                        >
+                          <RefreshCw
+                            size={18}
+                            className={`text-emerald-500 group-hover:text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`}
+                          />
+                          <span className="text-[11px] tracking-widest uppercase">
+                            {isSyncing ? 'Syncing...' : 'Sync Now'}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-slate-100"
+                        >
+                          <LogOut size={18} className="text-slate-400" />
+                          <span className="text-[11px] tracking-widest uppercase">Sign Out</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleLogin}
+                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-indigo-50 hover:text-indigo-600"
+                      >
+                        <LogIn size={18} className="text-indigo-500 group-hover:text-indigo-600" />
+                        <span className="text-[11px] tracking-widest uppercase">
+                          Sign in with Google
+                        </span>
+                      </button>
+                    )}
+                    <div className="my-2 border-t border-slate-100" />
+                  </>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {

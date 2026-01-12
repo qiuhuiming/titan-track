@@ -1,5 +1,6 @@
 import { INITIAL_EXERCISES } from '../constants'
 import type { AISettings, Exercise, WorkoutEntry, WorkoutPlan } from '../types'
+import { syncService } from './syncService'
 
 const STORAGE_KEYS = {
   EXERCISES: 'titan_track_exercises',
@@ -15,22 +16,25 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(INITIAL_EXERCISES))
     return INITIAL_EXERCISES
   },
-  saveExercises: (exercises: Exercise[]) => {
+  saveExercises: (exercises: Exercise[], triggerSync = true) => {
     localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(exercises))
+    if (triggerSync) syncService.scheduleSync()
   },
   getLogs: (): WorkoutEntry[] => {
     const data = localStorage.getItem(STORAGE_KEYS.LOGS)
     return data ? (JSON.parse(data) as WorkoutEntry[]) : []
   },
-  saveLogs: (logs: WorkoutEntry[]) => {
+  saveLogs: (logs: WorkoutEntry[], triggerSync = true) => {
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs))
+    if (triggerSync) syncService.scheduleSync()
   },
   getPlans: (): WorkoutPlan[] => {
     const data = localStorage.getItem(STORAGE_KEYS.PLANS)
     return data ? (JSON.parse(data) as WorkoutPlan[]) : []
   },
-  savePlans: (plans: WorkoutPlan[]) => {
+  savePlans: (plans: WorkoutPlan[], triggerSync = true) => {
     localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(plans))
+    if (triggerSync) syncService.scheduleSync()
   },
   getAISettings: (): AISettings | null => {
     const data = localStorage.getItem(STORAGE_KEYS.AI_SETTINGS)
@@ -38,5 +42,6 @@ export const storageService = {
   },
   saveAISettings: (settings: AISettings) => {
     localStorage.setItem(STORAGE_KEYS.AI_SETTINGS, JSON.stringify(settings))
+    // AI settings are local-only, don't sync
   },
 }
