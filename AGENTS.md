@@ -10,12 +10,15 @@ TitanTrack is a workout planning and logging app that helps users:
 
 # Tech Stack
 - **Frontend**: React 19 with functional components and hooks
+- **Backend**: FastAPI + SQLAlchemy (async) + PostgreSQL
+- **Authentication**: Email/password with JWT (HS256)
 - **Styling**: Tailwind CSS v4 with custom rounded card designs
-- **Language**: TypeScript (strict mode)
-- **Package Manager**: Bun
+- **Language**: TypeScript (strict mode), Python 3.12
+- **Package Manager**: Bun (frontend), uv (backend)
 - **Build Tool**: Vite with PWA plugin
-- **Storage**: localStorage for data persistence
+- **Storage**: Backend API (data), localStorage (settings only)
 - **AI Integration**: Multi-provider (OpenAI, Anthropic, Gemini, DeepSeek)
+- **Deployment**: Vercel (frontend), Fly.io (backend)
 
 # Directory Structure
 ```
@@ -24,7 +27,7 @@ src/                          # Frontend source code
 ├── main.tsx                  # React entry point
 ├── index.css                 # Tailwind CSS imports
 ├── types.ts                  # TypeScript interfaces
-├── constants.ts              # Initial seed data (exercises, plans, logs)
+├── constants.ts              # Initial seed data (exercises)
 ├── translations.ts           # i18n strings (zh/en)
 ├── components/
 │   ├── Dashboard.tsx         # HOME tab - calendar view, streak display
@@ -33,8 +36,26 @@ src/                          # Frontend source code
 │   ├── AICoach.tsx           # AI COACH tab - multi-provider AI chat
 │   └── AISettingsModal.tsx   # AI provider/model configuration
 └── services/
-    ├── storageService.ts     # localStorage wrapper for data persistence
+    ├── authService.ts        # Email/password auth, JWT token management
+    ├── apiService.ts         # HTTP client with Bearer token
+    ├── dataService.ts        # CRUD operations via backend API
+    ├── storageService.ts     # localStorage for UI settings only
     └── aiService.ts          # Multi-provider AI API integration
+
+backend/                      # Backend API (FastAPI)
+├── app/
+│   ├── api/v1/              # API routes
+│   │   ├── auth.py          # /auth/register, /auth/login, /auth/me
+│   │   ├── exercises.py     # Exercise CRUD
+│   │   ├── workout_plans.py # Plan CRUD
+│   │   └── workout_entries.py # Entry CRUD
+│   ├── models/              # SQLAlchemy models
+│   ├── schemas/             # Pydantic schemas
+│   ├── auth.py              # JWT creation/verification
+│   └── config.py            # Environment settings
+├── alembic/                 # Database migrations
+├── fly.toml                 # Fly.io deployment config
+└── pyproject.toml           # Python dependencies
 ```
 
 # Data Models
@@ -85,16 +106,42 @@ TabType = 'DASHBOARD' | 'WORKOUT_LOG' | 'PLAN' | 'AI_COACH'
 
 # Storage Architecture
 
-## storageService (`src/services/storageService.ts`)
-- **Location**: Browser localStorage
-- **Keys**: `titan_track_exercises`, `titan_track_logs`, `titan_track_plans`, `titan_track_ai_settings`
-- **Pattern**: Synchronous read/write with JSON serialization
-- **Fallback**: Auto-seeds with initial data from constants.ts
+## Backend API (Primary)
+- **Database**: PostgreSQL (Supabase)
+- **ORM**: SQLAlchemy (async)
+- **Tables**: users, exercises, workout_plans, workout_entries
+- **Auth**: JWT tokens stored in localStorage (`titan_track_token`)
+
+## localStorage (Settings Only)
+- **Keys**: `titan_track_lang`, `titan_track_ai_settings`, `titan_track_token`, `titan_track_user`
+- **Purpose**: UI preferences and authentication state
 
 # Service Layer
 
+## authService
+Email/password authentication:
+- `register(email, password)` - Create new user account
+- `login(email, password)` - Authenticate and get JWT token
+- `signOut()` - Clear stored tokens
+- `getAccessToken()` - Get JWT for API requests
+- `initialize()` - Restore session from localStorage
+
+## apiService
+HTTP client for backend API:
+- Automatically attaches Bearer token to requests
+- Methods: `get()`, `post()`, `put()`, `delete()`
+- Base URL: `VITE_API_URL` env var
+
+## dataService
+CRUD operations via backend API:
+- `getExercises()`, `createExercise()`, `updateExercise()`, `deleteExercise()`
+- `getPlans()`, `createPlan()`, `updatePlan()`, `deletePlan()`
+- `getEntries()`, `createEntry()`, `updateEntry()`, `deleteEntry()`
+
 ## storageService
-Primary storage service using localStorage. Synchronous methods with JSON parsing.
+localStorage for UI settings only:
+- `getAISettings()`, `saveAISettings()`
+- `clearLegacyData()` - Remove old localStorage data
 
 ## aiService
 Multi-provider AI integration:
@@ -104,7 +151,8 @@ Multi-provider AI integration:
 - Multi-turn conversation support with message history
 
 # State Management
-- **App.tsx**: Holds global state (`exercises`, `logs`, `plans`, `language`, `aiSettings`)
+- **App.tsx**: Holds global state (`user`, `authLoading`, `exercises`, `logs`, `plans`, `language`, `aiSettings`)
+- **Auth state**: `user` (current user), `authLoading` (initializing)
 - **Loading state**: Shows spinner while loading data
 - **Prop drilling**: State passed to child components with update callbacks
 - **Local component state**: Forms, modals, UI interactions
@@ -121,6 +169,12 @@ Use `bun run <script>`:
 - `build`: Build the app (`tsc -b` + `vite build`).
 - `lint`: Run ESLint (`eslint .`).
 - `preview`: Preview the production build.
+
+# UI Testing
+Agents should use the Chrome DevTools MCP to verify UI/UX changes.
+- **Test Account**: Use the credentials provided in the environment variables `TITAN_TRACK_EMAIL` and `TITAN_TRACK_PASSWORD`.
+- **Scope**: Verify core workflows (Login, Plan Creation, Workout Logging) on both mobile (390x844) and desktop viewports.
+- **Verification**: Capture screenshots or snapshots after significant UI modifications to ensure visual consistency with the "rounded card" design system.
 
 # Tooling Conventions
 
@@ -237,7 +291,7 @@ The documentation is designed to fit within context windows while providing:
 
 # Guidelines
 - Do not commit `.env` or secrets.
-- Use localStorage for persistence.
+- Data persisted via backend API; localStorage for settings only.
 - Match existing component patterns when adding new features.
 - Test on both desktop and mobile viewports.
-- PWA: App works offline after first load (except AI features).
+- PWA: App works offline after first load (except AI and data sync features).

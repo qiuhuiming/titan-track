@@ -15,6 +15,12 @@ Use this skill to debug web pages via the `chrome-devtools_*` MCP toolset. Follo
 - Reproduce user flows by clicking, typing, or navigating
 - Capture snapshots or screenshots for evidence
 
+## Test Environment
+- **Default Host**: `http://localhost:5173` (matches the Vite dev server configuration).
+- **Test Account**: Use environment variables for login credentials:
+  - Email: `TITAN_TRACK_EMAIL`
+  - Password: `TITAN_TRACK_PASSWORD`
+
 ## Workflow
 ### 1. Create Or Select A Page
 - Call `chrome-devtools_new_page` to open a URL, or `chrome-devtools_select_page` if a tab already exists.

@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, ChevronDown, ChevronUp, Clock, Edit2, Plus, Trash2, X } from 'lucide-react'
+import {
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Copy,
+  Edit2,
+  Minus,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react'
 import type { Exercise, Language, NavigationParams, WorkoutPlan, WorkoutSet } from '../types'
 import { translations } from '../translations'
+import ExerciseSelector from './ExerciseSelector'
 
 interface PlanManagerProps {
   plans: WorkoutPlan[]
@@ -16,7 +28,11 @@ interface PlanManagerProps {
 
 const PLANS_PER_PAGE = 5
 
-type PlanSetGroup = WorkoutSet & { count?: number }
+type PlanSetGroup = Omit<WorkoutSet, 'weight' | 'reps'> & {
+  weight: number | string
+  reps?: number | string
+  count?: number | string
+}
 
 type PlanFormExercise = {
   id: string
@@ -24,7 +40,7 @@ type PlanFormExercise = {
   sets: PlanSetGroup[]
 }
 
-type PlanFormState = Partial<WorkoutPlan> & {
+type PlanFormState = Partial<Omit<WorkoutPlan, 'exercises'>> & {
   exercises?: PlanFormExercise[]
 }
 
@@ -56,6 +72,32 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     exercises: [],
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [selectingExerciseForIdx, setSelectingExerciseForIdx] = useState<number | null>(null)
+
+  const getPlanMuscleGroups = (plan: WorkoutPlan) => {
+    const groups = new Set<string>()
+    plan.exercises.forEach((item) => {
+      const ex = exercises.find((e) => e.id === item.exerciseId)
+      if (ex) groups.add(ex.muscleGroup)
+    })
+    return Array.from(groups)
+  }
+
+  const handleDuplicatePlan = (plan: WorkoutPlan) => {
+    setEditingPlanId(null)
+    setNewPlan({
+      date: new Date().toISOString().split('T')[0],
+      title: `${plan.title} (Copy)`,
+      tags: [...plan.tags],
+      exercises: plan.exercises.map((exercise, index) => ({
+        id: `dup-${plan.id}-${exercise.exerciseId}-${String(index)}-${Math.random().toString(36).slice(2, 5)}`,
+        exerciseId: exercise.exerciseId,
+        sets: groupSets(exercise.sets),
+      })),
+    })
+    setIsAdding(true)
+    setExpandedPlanId(null)
+  }
 
   useEffect(() => {
     if (initialParams?.date) {
@@ -159,7 +201,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     })
   }, [groupedPlans.upcoming.length, groupedPlans.past.length, incompletePage, pastPage])
 
-  const isSameSetGroup = (a: WorkoutSet, b: WorkoutSet) =>
+  const isSameSetGroup = (a: WorkoutSet | PlanSetGroup, b: WorkoutSet | PlanSetGroup) =>
     a.weight === b.weight &&
     a.reps === b.reps &&
     a.timeMinutes === b.timeMinutes &&
@@ -170,7 +212,7 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     sets.reduce<PlanSetGroup[]>((acc, set) => {
       const last = acc.at(-1)
       if (last && isSameSetGroup(last, set)) {
-        last.count = (last.count ?? 1) + 1
+        last.count = Number(last.count ?? 1) + 1
         return acc
       }
       acc.push({ ...set, count: 1 })
@@ -180,8 +222,11 @@ const PlanManager: React.FC<PlanManagerProps> = ({
   const expandSetGroups = (groups: PlanSetGroup[]): WorkoutSet[] =>
     groups.flatMap((group) => {
       const { count = 1, ...set } = group
-      return Array.from({ length: Math.max(1, count) }, () => ({
+      const numericCount = typeof count === 'string' ? parseInt(count, 10) || 1 : count
+      return Array.from({ length: Math.max(1, numericCount) }, () => ({
         ...set,
+        weight: typeof set.weight === 'string' ? parseFloat(set.weight) || 0 : set.weight,
+        reps: typeof set.reps === 'string' ? parseInt(set.reps, 10) || 0 : set.reps,
         id: Math.random().toString(36).slice(2, 9),
       }))
     })
@@ -328,111 +373,135 @@ const PlanManager: React.FC<PlanManagerProps> = ({
     )
   }
 
-  const renderPlanCard = (plan: WorkoutPlan, colorScheme: 'indigo' | 'slate') => (
-    <div
-      key={plan.id}
-      id={`plan-${plan.id}`}
-      className="mb-4 overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm transition-all last:mb-0"
-    >
-      <button
-        type="button"
-        className="flex w-full cursor-pointer items-center justify-between p-5 text-left active:bg-slate-50"
-        onClick={() => {
-          setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)
-        }}
-      >
-        <div className="flex items-center gap-4">
-          <div
-            className={`rounded-2xl p-3 ${plan.isCompleted ? 'bg-emerald-50 text-emerald-500' : colorScheme === 'indigo' ? 'bg-indigo-50 text-indigo-500' : 'bg-slate-50 text-slate-500'}`}
-          >
-            <Calendar size={20} />
-          </div>
-          <div>
-            <h4 className="leading-tight font-black text-slate-900">{plan.title}</h4>
-            <p className="text-[10px] font-bold tracking-tight text-slate-400 uppercase">
-              {plan.date}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {plan.isCompleted ? (
-            <span className="rounded-lg bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-500 uppercase">
-              {t.status_completed}
-            </span>
-          ) : (
-            <span
-              className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase ${colorScheme === 'indigo' ? 'bg-indigo-50 text-indigo-400' : 'bg-slate-50 text-slate-400'}`}
-            >
-              {t.status_incomplete}
-            </span>
-          )}
-          {expandedPlanId === plan.id ? (
-            <ChevronUp size={18} className="text-slate-400" />
-          ) : (
-            <ChevronDown size={18} className="text-slate-400" />
-          )}
-        </div>
-      </button>
+  const renderPlanCard = (plan: WorkoutPlan, colorScheme: 'indigo' | 'slate') => {
+    const planMuscleGroups = getPlanMuscleGroups(plan)
 
-      {expandedPlanId === plan.id && (
-        <div className="animate-in slide-in-from-top-2 border-t border-slate-50 px-5 pt-4 pb-5">
-          <div className="space-y-4">
-            {plan.exercises.map((item, exerciseIndex) => {
-              const ex = exercises.find((e) => e.id === item.exerciseId)
-              return (
-                <div
-                  key={`plan-ex-${plan.id}-${item.exerciseId}-${String(exerciseIndex)}`}
-                  className="rounded-2xl bg-slate-50 p-4"
-                >
-                  <div className="mb-2 flex justify-between">
-                    <span className="text-xs font-black text-slate-900">{ex?.name}</span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {item.sets.length} Sets
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {item.sets.map((set, setIndex) => (
-                      <div
-                        key={set.id}
-                        className="rounded-lg border border-slate-100 bg-white p-2 text-[10px] text-slate-500"
-                      >
-                        Set {setIndex + 1}:{' '}
-                        <span className="font-black text-slate-900">
-                          {set.weight}kg x {set.reps}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleStartEdit(plan)
-              }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-50 p-3 text-xs font-bold text-indigo-600 transition-transform active:scale-95"
+    return (
+      <div
+        key={plan.id}
+        id={`plan-${plan.id}`}
+        className="mb-4 overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm transition-all last:mb-0"
+      >
+        <button
+          type="button"
+          className="flex w-full cursor-pointer items-center justify-between p-5 text-left active:bg-slate-50"
+          onClick={() => {
+            setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <div
+              className={`rounded-2xl p-3 ${plan.isCompleted ? 'bg-emerald-50 text-emerald-500' : colorScheme === 'indigo' ? 'bg-indigo-50 text-indigo-500' : 'bg-slate-50 text-slate-500'}`}
             >
-              <Edit2 size={14} /> {t.edit_plan}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                void removePlan(plan.id)
-              }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-500 transition-transform active:scale-95"
-            >
-              <Trash2 size={14} /> {t.cancel}
-            </button>
+              <Calendar size={20} />
+            </div>
+            <div>
+              <h4 className="leading-tight font-black text-slate-900">{plan.title}</h4>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <span className="mr-2 text-[10px] font-bold tracking-tight text-slate-400 uppercase">
+                  {plan.date}
+                </span>
+                {planMuscleGroups.map((mg) => (
+                  <span
+                    key={mg}
+                    className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-slate-500 uppercase"
+                  >
+                    {mg}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  )
+          <div className="flex items-center gap-3">
+            {plan.isCompleted ? (
+              <span className="rounded-lg bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-500 uppercase">
+                {t.status_completed}
+              </span>
+            ) : (
+              <span
+                className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase ${colorScheme === 'indigo' ? 'bg-indigo-50 text-indigo-400' : 'bg-slate-50 text-slate-400'}`}
+              >
+                {t.status_incomplete}
+              </span>
+            )}
+            {expandedPlanId === plan.id ? (
+              <ChevronUp size={18} className="text-slate-400" />
+            ) : (
+              <ChevronDown size={18} className="text-slate-400" />
+            )}
+          </div>
+        </button>
+
+        {expandedPlanId === plan.id && (
+          <div className="animate-in slide-in-from-top-2 border-t border-slate-50 px-5 pt-4 pb-5">
+            <div className="space-y-4">
+              {plan.exercises.map((item, exerciseIndex) => {
+                const ex = exercises.find((e) => e.id === item.exerciseId)
+                return (
+                  <div
+                    key={`plan-ex-${plan.id}-${item.exerciseId}-${String(exerciseIndex)}`}
+                    className="rounded-2xl bg-slate-50 p-4"
+                  >
+                    <div className="mb-2 flex justify-between">
+                      <span className="text-xs font-black text-slate-900">{ex?.name}</span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {item.sets.length} Sets
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {item.sets.map((set, setIndex) => (
+                        <div
+                          key={set.id}
+                          className="rounded-lg border border-slate-100 bg-white p-2 text-[10px] text-slate-500"
+                        >
+                          Set {setIndex + 1}:{' '}
+                          <span className="font-black text-slate-900">
+                            {set.weight}kg x {set.reps}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleStartEdit(plan)
+                }}
+                className="flex min-w-[80px] flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-50 p-3 text-xs font-bold text-indigo-600 transition-transform active:scale-95"
+              >
+                <Edit2 size={14} /> {t.edit_plan}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDuplicatePlan(plan)
+                }}
+                className="flex min-w-[80px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-600 transition-transform active:scale-95"
+              >
+                <Copy size={14} /> {t.duplicate_plan}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void removePlan(plan.id)
+                }}
+                className="flex min-w-[80px] flex-1 items-center justify-center gap-2 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-500 transition-transform active:scale-95"
+              >
+                <Trash2 size={14} /> {t.cancel}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col space-y-6 pb-12 duration-500">
@@ -505,6 +574,30 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                     >
                       {t.date}
                     </label>
+                    <div className="mb-2 flex gap-2">
+                      {[
+                        { label: t.today, date: new Date().toISOString().split('T')[0] },
+                        {
+                          label: t.tomorrow,
+                          date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                        },
+                      ].map((preset) => (
+                        <button
+                          key={preset.date}
+                          type="button"
+                          onClick={() => {
+                            setNewPlan({ ...newPlan, date: preset.date })
+                          }}
+                          className={`rounded-lg px-3 py-1.5 text-[10px] font-black tracking-widest uppercase transition-all ${
+                            newPlan.date === preset.date
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       id="plan-date"
                       type="date"
@@ -563,22 +656,20 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                             <label htmlFor={`exercise-select-${item.id}`} className="sr-only">
                               {t.exercise}
                             </label>
-                            <select
+                            <button
                               id={`exercise-select-${item.id}`}
-                              value={item.exerciseId}
-                              onChange={(e) => {
-                                const updated = [...(newPlan.exercises || [])]
-                                updated[idx].exerciseId = e.target.value
-                                setNewPlan({ ...newPlan, exercises: updated })
+                              type="button"
+                              onClick={() => {
+                                setSelectingExerciseForIdx(idx)
                               }}
-                              className="w-full rounded-lg border-none bg-white p-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                              className="flex w-full items-center justify-between rounded-lg border-none bg-white p-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                             >
-                              {exercises.map((ex) => (
-                                <option key={ex.id} value={ex.id}>
-                                  {ex.name}
-                                </option>
-                              ))}
-                            </select>
+                              <span>
+                                {exercises.find((ex) => ex.id === item.exerciseId)?.name ||
+                                  t.exercise}
+                              </span>
+                              <ChevronDown size={16} className="text-slate-400" />
+                            </button>
                           </div>
 
                           <div className="space-y-2">
@@ -588,42 +679,105 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                                 className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm"
                               >
                                 <div className="flex flex-1 items-center gap-1">
-                                  <input
-                                    type="number"
-                                    aria-label="Weight"
-                                    value={group.weight || 0}
-                                    onChange={(e) => {
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const val = Number(group.weight) || 0
                                       const updated = [...(newPlan.exercises || [])]
                                       updated[idx].sets[groupIdx] = {
                                         ...group,
-                                        weight: parseFloat(e.target.value) || 0,
+                                        weight: Math.max(0, val - 2.5),
                                       }
                                       setNewPlan({ ...newPlan, exercises: updated })
                                     }}
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-center text-sm font-black text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 active:scale-90"
+                                  >
+                                    <Minus size={14} />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    aria-label="Weight"
+                                    value={group.weight}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      const updated = [...(newPlan.exercises || [])]
+                                      updated[idx].sets[groupIdx] = {
+                                        ...group,
+                                        weight: val === '' ? '' : parseFloat(val),
+                                      }
+                                      setNewPlan({ ...newPlan, exercises: updated })
+                                    }}
+                                    className="w-full min-w-[50px] rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-center text-sm font-black text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                                     placeholder="0"
                                   />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const val = Number(group.weight) || 0
+                                      const updated = [...(newPlan.exercises || [])]
+                                      updated[idx].sets[groupIdx] = {
+                                        ...group,
+                                        weight: val + 2.5,
+                                      }
+                                      setNewPlan({ ...newPlan, exercises: updated })
+                                    }}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 active:scale-90"
+                                  >
+                                    <Plus size={14} />
+                                  </button>
                                   <span className="text-[9px] font-bold tracking-tighter text-slate-400 uppercase">
                                     kg
                                   </span>
                                 </div>
 
                                 <div className="flex flex-1 items-center gap-1">
-                                  <input
-                                    type="number"
-                                    aria-label="Reps"
-                                    value={group.reps || 0}
-                                    onChange={(e) => {
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const val = Number(group.reps) || 0
                                       const updated = [...(newPlan.exercises || [])]
                                       updated[idx].sets[groupIdx] = {
                                         ...group,
-                                        reps: parseInt(e.target.value, 10) || 0,
+                                        reps: Math.max(0, val - 1),
                                       }
                                       setNewPlan({ ...newPlan, exercises: updated })
                                     }}
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-center text-sm font-black text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 active:scale-90"
+                                  >
+                                    <Minus size={14} />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    aria-label="Reps"
+                                    value={group.reps ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      const updated = [...(newPlan.exercises || [])]
+                                      updated[idx].sets[groupIdx] = {
+                                        ...group,
+                                        reps: val === '' ? '' : parseInt(val, 10),
+                                      }
+                                      setNewPlan({ ...newPlan, exercises: updated })
+                                    }}
+                                    className="w-full min-w-[50px] rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-center text-sm font-black text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                                     placeholder="0"
                                   />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const val = Number(group.reps) || 0
+                                      const updated = [...(newPlan.exercises || [])]
+                                      updated[idx].sets[groupIdx] = {
+                                        ...group,
+                                        reps: val + 1,
+                                      }
+                                      setNewPlan({ ...newPlan, exercises: updated })
+                                    }}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 active:scale-90"
+                                  >
+                                    <Plus size={14} />
+                                  </button>
                                   <span className="text-[9px] font-bold tracking-tighter text-slate-400 uppercase">
                                     reps
                                   </span>
@@ -637,14 +791,15 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                                     type="number"
                                     min={1}
                                     aria-label="Set count"
-                                    value={group.count ?? 1}
+                                    value={group.count ?? ''}
                                     onChange={(e) => {
-                                      const nextCount = Math.max(
-                                        1,
-                                        parseInt(e.target.value, 10) || 1
-                                      )
+                                      const val = e.target.value
                                       const updated = [...(newPlan.exercises || [])]
-                                      updated[idx].sets[groupIdx] = { ...group, count: nextCount }
+                                      updated[idx].sets[groupIdx] = {
+                                        ...group,
+                                        count:
+                                          val === '' ? '' : Math.max(1, parseInt(val, 10) || 1),
+                                      }
                                       setNewPlan({ ...newPlan, exercises: updated })
                                     }}
                                     className="w-full border-none bg-transparent p-0 text-center text-sm font-black text-indigo-600 focus:ring-0"
@@ -719,6 +874,44 @@ const PlanManager: React.FC<PlanManagerProps> = ({
                   {isSaving ? '...' : editingPlanId ? t.update_plan : t.save_plan}
                 </button>
               </div>
+
+              {selectingExerciseForIdx !== null && (
+                <div className="animate-in slide-in-from-bottom-4 fixed inset-0 z-[70] flex flex-col bg-white">
+                  <div className="pt-safe flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectingExerciseForIdx(null)
+                      }}
+                      className="rounded-xl bg-slate-50 p-2 text-slate-400"
+                    >
+                      <X size={24} />
+                    </button>
+                    <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">
+                      {t.exercise}
+                    </h3>
+                    <div className="w-10"></div>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <ExerciseSelector
+                      exercises={exercises}
+                      selectedExerciseId={
+                        newPlan.exercises?.[selectingExerciseForIdx]?.exerciseId || ''
+                      }
+                      language={language}
+                      onSelect={(exerciseId) => {
+                        const updated = [...(newPlan.exercises || [])]
+                        updated[selectingExerciseForIdx].exerciseId = exerciseId
+                        setNewPlan({ ...newPlan, exercises: updated })
+                        setSelectingExerciseForIdx(null)
+                      }}
+                      onClose={() => {
+                        setSelectingExerciseForIdx(null)
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </form>
           </div>,
           document.body

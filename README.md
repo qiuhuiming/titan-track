@@ -31,36 +31,41 @@ AI-powered fitness tracking PWA for planning workouts, logging progress, and get
 
 ## Tech Stack
 
+**Frontend:**
 - React 19 + TypeScript
 - Tailwind CSS v4
 - Vite + vite-plugin-pwa
-- localStorage for data persistence
 - Bun package manager
+
+**Backend:**
+- FastAPI + SQLAlchemy (async)
+- PostgreSQL (Supabase)
+- JWT authentication (HS256)
+- Python 3.12 + uv
 
 ## Quick Start
 
+**Frontend:**
 ```bash
-# Install dependencies
-bun install
+bun install          # Install dependencies
+bun run dev          # Start dev server on :5173
+bun run build        # Build for production
+bun run lint         # Lint code
+```
 
-# Start development server
-bun run dev
-
-# Build for production
-bun run build
-
-# Preview production build
-bun run preview
-
-# Lint
-bun run lint
+**Backend:**
+```bash
+cd backend
+uv sync                              # Install dependencies
+uv run alembic upgrade head          # Run migrations
+uv run uvicorn app.main:app --reload # Start dev server on :8000
 ```
 
 ## Project Structure
 
 ```
-src/
-├── App.tsx                   # Root component, navigation, global state
+src/                          # Frontend
+├── App.tsx                   # Root component, auth, navigation
 ├── components/
 │   ├── Dashboard.tsx         # HOME - calendar, streaks
 │   ├── WorkoutLog.tsx        # LOG - workout execution
@@ -68,11 +73,32 @@ src/
 │   ├── AICoach.tsx           # AI COACH - chat interface
 │   └── AISettingsModal.tsx   # AI provider configuration
 ├── services/
-│   ├── storageService.ts     # localStorage wrapper
-│   └── aiService.ts          # Multi-provider AI integration
+│   ├── authService.ts        # Email/password auth
+│   ├── apiService.ts         # HTTP client
+│   ├── dataService.ts        # CRUD via API
+│   └── aiService.ts          # Multi-provider AI
 ├── types.ts                  # TypeScript interfaces
-├── constants.ts              # Initial seed data
 └── translations.ts           # i18n strings (zh/en)
+
+backend/                      # Backend API
+├── app/
+│   ├── api/v1/              # API routes (auth, exercises, plans, entries)
+│   ├── models/              # SQLAlchemy models
+│   └── schemas/             # Pydantic schemas
+├── alembic/                 # Database migrations
+└── fly.toml                 # Fly.io config
+```
+
+## Deployment
+
+**Production URLs:**
+- Frontend: https://titan-track.vercel.app
+- Backend: https://titan-track-api.fly.dev
+
+**Deploy scripts:**
+```bash
+./scripts/deploy_frontend_vercel.sh  # Deploy to Vercel
+./scripts/deploy_backend_fly.sh      # Deploy to Fly.io
 ```
 
 ## License

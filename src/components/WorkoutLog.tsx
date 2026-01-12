@@ -10,12 +10,14 @@ import {
   SkipForward,
   Trash2,
   X,
+  ChevronDown,
 } from 'lucide-react'
 import type { FC } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { translations } from '../translations'
 import type { Exercise, Language, WorkoutEntry, WorkoutPlan, WorkoutSet } from '../types'
+import ExerciseSelector from './ExerciseSelector'
 
 interface WorkoutLogProps {
   logs: WorkoutEntry[]
@@ -26,6 +28,12 @@ interface WorkoutLogProps {
   onUpdateEntry: (id: string, updates: Partial<Omit<WorkoutEntry, 'id'>>) => Promise<void>
   onDeleteEntry: (id: string) => Promise<void>
   onUpdatePlan: (id: string, updates: Partial<Omit<WorkoutPlan, 'id'>>) => Promise<void>
+}
+
+type EditableWorkoutSet = Omit<WorkoutSet, 'weight' | 'reps' | 'rpe'> & {
+  weight: number | string
+  reps?: number | string
+  rpe?: number | string
 }
 
 const WorkoutLog: FC<WorkoutLogProps> = ({
@@ -47,7 +55,7 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
   // State for the multi-exercise form (plan based)
   const [activePlan, setActivePlan] = useState<WorkoutPlan | null>(null)
   const [planProgress, setPlanProgress] = useState<
-    { exerciseId: string; sets: WorkoutSet[]; skipped?: boolean }[]
+    { exerciseId: string; sets: EditableWorkoutSet[]; skipped?: boolean }[]
   >([])
   const [activePlanOriginalDate, setActivePlanOriginalDate] = useState<string | null>(null)
 
@@ -94,7 +102,12 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
       targetPlan.exercises.map((ex) => ({
         exerciseId: ex.exerciseId,
         skipped: false,
-        sets: ex.sets.map((s) => ({ ...s, completed: false, rpe: 7, notes: '' })),
+        sets: ex.sets.map((s) => ({
+          ...s,
+          completed: false,
+          rpe: 7,
+          notes: '',
+        })) as EditableWorkoutSet[],
       }))
     )
     setIsAdding(true)
@@ -104,8 +117,19 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
     date: todayStr,
     workoutType: '',
     exerciseId: exercises[0]?.id || '',
-    sets: [{ id: '1', weight: 0, reps: 0, rpe: 7, completed: true }] as WorkoutSet[],
+    sets: [{ id: '1', weight: 0, reps: 0, rpe: 7, completed: true }] as EditableWorkoutSet[],
   })
+  const [isSelectingExercise, setIsSelectingExercise] = useState(false)
+
+  // Disable background scroll when modal is open
+  useEffect(() => {
+    if (!isAdding) return
+
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isAdding])
 
   const formDateId = 'workout-log-date'
   const formTypeId = 'workout-log-type'
@@ -114,8 +138,8 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
   const updatePlanSet = (
     exIdx: number,
     setIdx: number,
-    field: keyof WorkoutSet,
-    value: WorkoutSet[keyof WorkoutSet]
+    field: keyof EditableWorkoutSet,
+    value: EditableWorkoutSet[keyof EditableWorkoutSet]
   ) => {
     const updatedProgress = [...planProgress]
     updatedProgress[exIdx].sets[setIdx] = {
@@ -179,7 +203,12 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
           date: activePlan.date,
           exerciseId: p.exerciseId,
           workoutType: activePlan.title,
-          sets: p.sets,
+          sets: p.sets.map((s) => ({
+            ...s,
+            weight: typeof s.weight === 'string' ? parseFloat(s.weight) || 0 : s.weight,
+            reps: typeof s.reps === 'string' ? parseInt(s.reps, 10) || 0 : s.reps,
+            rpe: typeof s.rpe === 'string' ? parseInt(s.rpe, 10) || 0 : s.rpe,
+          })) as WorkoutSet[],
           planId: activePlan.id,
         }))
 
@@ -209,6 +238,12 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
       const newEntry: WorkoutEntry = {
         id: crypto.randomUUID(),
         ...formData,
+        sets: formData.sets.map((s) => ({
+          ...s,
+          weight: typeof s.weight === 'string' ? parseFloat(s.weight) || 0 : s.weight,
+          reps: typeof s.reps === 'string' ? parseInt(s.reps, 10) || 0 : s.reps,
+          rpe: typeof s.rpe === 'string' ? parseInt(s.rpe, 10) || 0 : s.rpe,
+        })) as WorkoutSet[],
       }
       await onCreateEntry(newEntry)
       setIsAdding(false)
@@ -451,11 +486,12 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                       aria-label="Weight in kg"
                                       value={set.weight}
                                       onChange={(e) => {
+                                        const val = e.target.value
                                         updatePlanSet(
                                           exIdx,
                                           setIdx,
                                           'weight',
-                                          parseFloat(e.target.value)
+                                          val === '' ? '' : parseFloat(val)
                                         )
                                       }}
                                       className="w-full bg-transparent text-center text-lg font-black text-slate-900 outline-none"
@@ -468,13 +504,14 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                     <input
                                       type="number"
                                       aria-label="Reps"
-                                      value={set.reps}
+                                      value={set.reps ?? ''}
                                       onChange={(e) => {
+                                        const val = e.target.value
                                         updatePlanSet(
                                           exIdx,
                                           setIdx,
                                           'reps',
-                                          parseInt(e.target.value, 10)
+                                          val === '' ? '' : parseInt(val, 10)
                                         )
                                       }}
                                       className="w-full bg-transparent text-center text-lg font-black text-slate-900 outline-none"
@@ -487,13 +524,14 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                     <input
                                       type="number"
                                       aria-label="RPE"
-                                      value={set.rpe}
+                                      value={set.rpe ?? ''}
                                       onChange={(e) => {
+                                        const val = e.target.value
                                         updatePlanSet(
                                           exIdx,
                                           setIdx,
                                           'rpe',
-                                          parseInt(e.target.value, 10)
+                                          val === '' ? '' : parseInt(val, 10)
                                         )
                                       }}
                                       className="w-full bg-transparent text-center text-lg font-black text-slate-900 outline-none"
@@ -590,20 +628,20 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                       >
                         {t.exercise}
                       </label>
-                      <select
+                      <button
                         id={formExerciseId}
-                        value={formData.exerciseId}
-                        onChange={(e) => {
-                          setFormData({ ...formData, exerciseId: e.target.value })
+                        type="button"
+                        onClick={() => {
+                          setIsSelectingExercise(true)
                         }}
-                        className="w-full appearance-none rounded-2xl border-none bg-slate-50 p-4 font-bold text-slate-900 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        className="flex w-full items-center justify-between rounded-2xl border-none bg-slate-50 p-4 font-bold text-slate-900 shadow-sm focus:ring-2 focus:ring-indigo-500"
                       >
-                        {exercises.map((ex) => (
-                          <option key={ex.id} value={ex.id}>
-                            {ex.name}
-                          </option>
-                        ))}
-                      </select>
+                        <span>
+                          {exercises.find((ex) => ex.id === formData.exerciseId)?.name ||
+                            t.exercise}
+                        </span>
+                        <ChevronDown size={20} className="text-slate-400" />
+                      </button>
                     </div>
                   </div>
 
@@ -652,10 +690,11 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                 type="number"
                                 aria-label="Weight in kg"
                                 placeholder="KG"
-                                value={set.weight || ''}
+                                value={set.weight}
                                 onChange={(e) => {
+                                  const val = e.target.value
                                   const updated = [...formData.sets]
-                                  updated[i].weight = parseFloat(e.target.value)
+                                  updated[i].weight = val === '' ? '' : parseFloat(val)
                                   setFormData({ ...formData, sets: updated })
                                 }}
                                 className="w-full bg-transparent text-center font-black text-slate-900 outline-none"
@@ -669,10 +708,11 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                 type="number"
                                 aria-label="Reps"
                                 placeholder="REPS"
-                                value={set.reps || ''}
+                                value={set.reps ?? ''}
                                 onChange={(e) => {
+                                  const val = e.target.value
                                   const updated = [...formData.sets]
-                                  updated[i].reps = parseInt(e.target.value, 10)
+                                  updated[i].reps = val === '' ? '' : parseInt(val, 10)
                                   setFormData({ ...formData, sets: updated })
                                 }}
                                 className="w-full bg-transparent text-center font-black text-slate-900 outline-none"
@@ -686,10 +726,11 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                                 type="number"
                                 aria-label="RPE"
                                 placeholder="RPE"
-                                value={set.rpe || ''}
+                                value={set.rpe ?? ''}
                                 onChange={(e) => {
+                                  const val = e.target.value
                                   const updated = [...formData.sets]
-                                  updated[i].rpe = parseInt(e.target.value, 10)
+                                  updated[i].rpe = val === '' ? '' : parseInt(val, 10)
                                   setFormData({ ...formData, sets: updated })
                                 }}
                                 className="w-full bg-transparent text-center font-black text-slate-900 outline-none"
@@ -730,6 +771,40 @@ const WorkoutLog: FC<WorkoutLogProps> = ({
                 {isSaving ? '...' : activePlan ? t.complete_plan : t.save_workout}
               </button>
             </div>
+
+            {isSelectingExercise && (
+              <div className="animate-in slide-in-from-bottom-4 fixed inset-0 z-[70] flex flex-col bg-white">
+                <div className="pt-safe flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectingExercise(false)
+                    }}
+                    className="rounded-xl bg-slate-50 p-2 text-slate-400"
+                  >
+                    <X size={24} />
+                  </button>
+                  <h3 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">
+                    {t.exercise}
+                  </h3>
+                  <div className="w-10"></div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <ExerciseSelector
+                    exercises={exercises}
+                    selectedExerciseId={formData.exerciseId}
+                    language={language}
+                    onSelect={(exerciseId) => {
+                      setFormData({ ...formData, exerciseId })
+                      setIsSelectingExercise(false)
+                    }}
+                    onClose={() => {
+                      setIsSelectingExercise(false)
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>,
           document.body
         )

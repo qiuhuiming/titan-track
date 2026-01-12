@@ -65,7 +65,10 @@ export const translations = {
     cancel: '取消',
     save_plan: '保存计划',
     update_plan: '更新计划',
+    duplicate_plan: '复制计划',
     confirm_delete: '确定要删除吗？',
+    today: '今天',
+    tomorrow: '明天',
     // Exercise Manager
     exercise_arsenal: '动作库',
     manage_arsenal: '管理你的训练动作库。',
@@ -182,7 +185,10 @@ export const translations = {
     cancel: 'Cancel',
     save_plan: 'Save Plan',
     update_plan: 'Update Plan',
+    duplicate_plan: 'Duplicate Plan',
     confirm_delete: 'Are you sure you want to delete this?',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
     // Exercise Manager
     exercise_arsenal: 'Exercise Arsenal',
     manage_arsenal: 'Manage your collection of training exercises.',
