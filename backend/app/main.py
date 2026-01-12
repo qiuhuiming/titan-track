@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import get_current_user_with_db
+from app.api.v1 import api_router
 from app.config import settings
 from app.database import async_engine
 from app.models import User
@@ -32,6 +33,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API router
+app.include_router(api_router)
 
 
 @app.get("/health")
