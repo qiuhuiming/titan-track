@@ -54,7 +54,7 @@ bun run build
 
 # Deploy to Vercel
 echo -e "${BLUE}Deploying to Vercel...${NC}"
-vercel --prod dist
+vercel --prod --yes
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
