@@ -172,6 +172,7 @@ Use `bun run <script>`:
 
 # UI Testing
 Agents should use the Chrome DevTools MCP to verify UI/UX changes.
+- **Default Host**: `http://localhost:5173` (Vite dev server)
 - **Test Account**: Use the credentials provided in the environment variables `TITAN_TRACK_EMAIL` and `TITAN_TRACK_PASSWORD`.
 - **Scope**: Verify core workflows (Login, Plan Creation, Workout Logging) on both mobile (390x844) and desktop viewports.
 - **Verification**: Capture screenshots or snapshots after significant UI modifications to ensure visual consistency with the "rounded card" design system.
