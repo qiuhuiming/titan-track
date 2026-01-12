@@ -15,12 +15,12 @@ class ApiService {
     this.baseUrl = baseUrl
   }
 
-  private async getHeaders(): Promise<HeadersInit> {
+  private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
 
-    const token = await authService.getAccessToken()
+    const token = authService.getAccessToken()
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
@@ -29,7 +29,7 @@ class ApiService {
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const headers = await this.getHeaders()
+    const headers = this.getHeaders()
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,

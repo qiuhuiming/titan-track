@@ -1,4 +1,3 @@
-import type { Session, User } from '@supabase/supabase-js'
 import {
   Activity,
   AlertCircle,
@@ -14,6 +13,7 @@ import {
   RefreshCw,
   Settings,
   Sparkles,
+  UserPlus,
   X,
 } from 'lucide-react'
 import type { FC } from 'react'
@@ -24,7 +24,7 @@ import Dashboard from './components/Dashboard'
 import ExerciseManager from './components/ExerciseManager'
 import PlanManager from './components/PlanManager'
 import WorkoutLog from './components/WorkoutLog'
-import { authService } from './services/authService'
+import { authService, type AuthUser } from './services/authService'
 import { dataService } from './services/dataService'
 import { storageService } from './services/storageService'
 import { translations } from './translations'
@@ -56,15 +56,17 @@ const App: FC = () => {
   const mobileSettingsRef = useRef<HTMLDivElement | null>(null)
 
   // Auth state
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [authSubmitting, setAuthSubmitting] = useState(false)
 
   const t = translations[language]
 
   // Load data from API
   const loadData = useCallback(async () => {
-    if (!session) {
+    if (!user) {
       setExercises([])
       setLogs([])
       setPlans([])
@@ -84,11 +86,11 @@ const App: FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [session])
+  }, [user])
 
   // Refresh data
   const handleRefresh = useCallback(async () => {
-    if (!session || isRefreshing) return
+    if (!user || isRefreshing) return
     setIsRefreshing(true)
     try {
       const data = await dataService.fetchAllData()
@@ -102,34 +104,23 @@ const App: FC = () => {
     } finally {
       setIsRefreshing(false)
     }
-  }, [session, isRefreshing])
+  }, [user, isRefreshing])
 
   // Initial auth check
   useEffect(() => {
-    void authService.getSession().then(({ data }) => {
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
+    void authService.initialize().then((authUser) => {
+      setUser(authUser)
       setAuthLoading(false)
     })
-
-    const { data } = authService.onAuthStateChange((newSession) => {
-      setSession(newSession)
-      setUser(newSession?.user ?? null)
-      setAuthLoading(false)
-    })
-
-    return () => {
-      data.subscription.unsubscribe()
-    }
   }, [])
 
-  // Load data when session changes
+  // Load data when user changes
   useEffect(() => {
     if (!authLoading) {
       setIsLoading(true)
       void loadData()
     }
-  }, [session, authLoading, loadData])
+  }, [user, authLoading, loadData])
 
   // Load local preferences
   useEffect(() => {
@@ -188,15 +179,38 @@ const App: FC = () => {
     storageService.saveLanguage(nextLang)
   }
 
-  const handleLogin = () => {
-    setIsSettingsOpen(false)
-    void authService.signInWithGoogle()
+  const handleAuthSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const formData = new FormData(form)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+
+    setAuthError(null)
+    setAuthSubmitting(true)
+
+    try {
+      const result =
+        authMode === 'login'
+          ? await authService.login(email, password)
+          : await authService.register(email, password)
+
+      if (result.error) {
+        setAuthError(result.error.message)
+      } else {
+        const authUser = authService.getUser()
+        setUser(authUser)
+      }
+    } finally {
+      setAuthSubmitting(false)
+    }
   }
 
   const handleLogout = () => {
     setIsSettingsOpen(false)
     storageService.clearLegacyData()
-    void authService.signOut()
+    authService.signOut()
+    setUser(null)
   }
 
   // Exercise CRUD handlers
@@ -326,7 +340,7 @@ const App: FC = () => {
   }
 
   // Require login
-  if (!session && authService.isConfigured()) {
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-white p-6">
         <div className="mb-8 flex items-center space-x-3">
@@ -338,16 +352,79 @@ const App: FC = () => {
           </h1>
         </div>
         <div className="w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-8 shadow-xl">
-          <h2 className="mb-2 text-center text-xl font-bold text-slate-900">Welcome Back</h2>
-          <p className="mb-6 text-center text-sm text-slate-500">Sign in to access your workouts</p>
-          <button
-            type="button"
-            onClick={handleLogin}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 py-3 font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-xl active:scale-[0.98]"
-          >
-            <LogIn size={20} />
-            Sign in with Google
-          </button>
+          <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
+            {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+          </h2>
+          <p className="mb-6 text-center text-sm text-slate-500">
+            {authMode === 'login'
+              ? 'Sign in to access your workouts'
+              : 'Start tracking your fitness'}
+          </p>
+
+          {authError && (
+            <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={(e) => void handleAuthSubmit(e)} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                minLength={6}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={authSubmitting}
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 py-3 font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
+            >
+              {authSubmitting ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : authMode === 'login' ? (
+                <LogIn size={20} />
+              ) : (
+                <UserPlus size={20} />
+              )}
+              {authMode === 'login' ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode(authMode === 'login' ? 'register' : 'login')
+                setAuthError(null)
+              }}
+              className="text-sm text-indigo-600 hover:text-indigo-700"
+            >
+              {authMode === 'login'
+                ? "Don't have an account? Sign up"
+                : 'Already have an account? Sign in'}
+            </button>
+          </div>
         </div>
         <button
           type="button"
@@ -459,32 +536,28 @@ const App: FC = () => {
                 className="animate-in zoom-in-95 fade-in absolute bottom-full left-0 z-50 mb-2 w-full rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl duration-200"
               >
                 {/* Auth buttons */}
-                {authService.isConfigured() && user && (
-                  <>
-                    <div className="truncate px-3 py-2 text-xs text-slate-500">{user.email}</div>
-                    <button
-                      type="button"
-                      onClick={() => void handleRefresh()}
-                      disabled={isRefreshing}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
-                    >
-                      <RefreshCw
-                        size={18}
-                        className={`text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`}
-                      />
-                      <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
-                    >
-                      <LogOut size={18} className="text-slate-400" />
-                      <span>Sign Out</span>
-                    </button>
-                    <div className="my-2 border-t border-slate-100" />
-                  </>
-                )}
+                <div className="truncate px-3 py-2 text-xs text-slate-500">{user.email}</div>
+                <button
+                  type="button"
+                  onClick={() => void handleRefresh()}
+                  disabled={isRefreshing}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    size={18}
+                    className={`text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`}
+                  />
+                  <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                >
+                  <LogOut size={18} className="text-slate-400" />
+                  <span>Sign Out</span>
+                </button>
+                <div className="my-2 border-t border-slate-100" />
 
                 <button
                   type="button"
@@ -552,36 +625,30 @@ const App: FC = () => {
                 </div>
 
                 {/* Auth buttons */}
-                {authService.isConfigured() && user && (
-                  <>
-                    <div className="truncate px-3 py-2 text-[10px] text-slate-500">
-                      {user.email}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleRefresh()}
-                      disabled={isRefreshing}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
-                    >
-                      <RefreshCw
-                        size={18}
-                        className={`text-emerald-500 group-hover:text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`}
-                      />
-                      <span className="text-[11px] tracking-widest uppercase">
-                        {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-slate-100"
-                    >
-                      <LogOut size={18} className="text-slate-400" />
-                      <span className="text-[11px] tracking-widest uppercase">Sign Out</span>
-                    </button>
-                    <div className="my-2 border-t border-slate-100" />
-                  </>
-                )}
+                <div className="truncate px-3 py-2 text-[10px] text-slate-500">{user.email}</div>
+                <button
+                  type="button"
+                  onClick={() => void handleRefresh()}
+                  disabled={isRefreshing}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    size={18}
+                    className={`text-emerald-500 group-hover:text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`}
+                  />
+                  <span className="text-[11px] tracking-widest uppercase">
+                    {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-slate-700 transition-all hover:bg-slate-100"
+                >
+                  <LogOut size={18} className="text-slate-400" />
+                  <span className="text-[11px] tracking-widest uppercase">Sign Out</span>
+                </button>
+                <div className="my-2 border-t border-slate-100" />
 
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,26 +24,24 @@ async def get_current_user_with_db(
     current_user: dict[str, str] = Depends(get_current_user),
 ) -> User:
     """
-    Get current user, creating if doesn't exist (first login).
+    Get current user from database.
 
-    This upserts the user from Supabase Auth into our database.
+    Users must register via /api/v1/auth/register before accessing protected endpoints.
     """
     user_id = current_user["id"]
-    email = current_user["email"]
 
-    # Try to get existing user
+    # Get existing user
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if user is None:
-        # First login - create user
-        user = User(id=user_id, email=email, created_at=datetime.utcnow())
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-    else:
-        # Update last login
-        user.last_login_at = datetime.utcnow()
-        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found. Please register first.",
+        )
+
+    # Update last login
+    user.last_login_at = datetime.utcnow()
+    await db.commit()
 
     return user

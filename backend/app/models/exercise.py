@@ -8,14 +8,14 @@ from app.models.base import UserOwnedMixin
 
 
 class MuscleGroup(str, enum.Enum):
-    CHEST = "Chest"
-    BACK = "Back"
-    LEGS = "Legs"
-    SHOULDERS = "Shoulders"
-    ARMS = "Arms"
-    CORE = "Core"
-    FULL_BODY = "Full Body"
-    CARDIO = "Cardio"
+    Chest = "Chest"
+    Back = "Back"
+    Legs = "Legs"
+    Shoulders = "Shoulders"
+    Arms = "Arms"
+    Core = "Core"
+    Full_Body = "Full Body"
+    Cardio = "Cardio"
 
 
 class Exercise(UserOwnedMixin, Base):

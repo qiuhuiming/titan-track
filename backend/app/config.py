@@ -8,8 +8,10 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
-    # Supabase Auth (JWKS-based, no shared secret needed)
-    SUPABASE_URL: str  # Required for JWKS endpoint
+    # JWT Auth
+    JWT_SECRET: str = "dev-secret-change-in-production-at-least-32-chars"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 10080  # 7 days
 
     # Server
     HOST: str = "0.0.0.0"

@@ -1,11 +1,12 @@
 # TitanTrack Architecture
 
 ## Tech Stack
-- Frontend: React 19 + TypeScript + Tailwind CSS v4
-- Storage: localStorage with JSON serialization
-- Package Manager: Bun
-- Build Tool: Vite with PWA plugin
-- AI: Multi-provider (OpenAI, Anthropic, Gemini, DeepSeek)
+- **Frontend**: React 19 + TypeScript + Tailwind CSS v4
+- **Backend**: FastAPI + SQLAlchemy (async) + PostgreSQL
+- **Authentication**: Email/password with JWT (HS256)
+- **Package Manager**: Bun (frontend), uv (backend)
+- **Build Tool**: Vite with PWA plugin
+- **AI**: Multi-provider (OpenAI, Anthropic, Gemini, DeepSeek)
 
 ## Component Tree
 ```

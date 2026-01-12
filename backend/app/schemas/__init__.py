@@ -1,3 +1,4 @@
+from app.schemas.auth import TokenResponse, UserInfo, UserLogin, UserRegister
 from app.schemas.exercise import ExerciseCreate, ExerciseResponse, ExerciseUpdate
 from app.schemas.user import UserResponse
 from app.schemas.workout_entry import (
@@ -12,6 +13,10 @@ from app.schemas.workout_plan import (
 )
 
 __all__ = [
+    "UserRegister",
+    "UserLogin",
+    "TokenResponse",
+    "UserInfo",
     "UserResponse",
     "ExerciseCreate",
     "ExerciseUpdate",
