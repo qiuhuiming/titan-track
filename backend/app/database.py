@@ -24,6 +24,11 @@ async_engine = create_async_engine(
     echo=settings.DEBUG,
     pool_size=5,
     max_overflow=10,
+    # Disable prepared statements for Supabase/pgbouncer compatibility
+    connect_args={
+        "prepared_statement_cache_size": 0,
+        "statement_cache_size": 0,
+    },
 )
 
 AsyncSessionLocal = async_sessionmaker(

@@ -1,11 +1,12 @@
-from datetime import date, datetime
+from datetime import date as date_type
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class WorkoutEntryBase(BaseModel):
-    date: date
+    date: date_type
     exercise_id: str = Field(..., max_length=36)
     workout_type: str = Field(..., max_length=100)
     sets: list[dict[str, Any]] = Field(default_factory=list)
@@ -17,7 +18,7 @@ class WorkoutEntryCreate(WorkoutEntryBase):
 
 
 class WorkoutEntryUpdate(BaseModel):
-    date: date | None = None
+    date: date_type | None = None
     exercise_id: str | None = Field(None, max_length=36)
     workout_type: str | None = Field(None, max_length=100)
     sets: list[dict[str, Any]] | None = None

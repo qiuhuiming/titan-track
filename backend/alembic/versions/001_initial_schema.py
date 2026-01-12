@@ -21,7 +21,27 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create MuscleGroup enum
+    # Create MuscleGroup enum (only if it doesn't exist)
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text("SELECT 1 FROM pg_type WHERE typname = 'musclegroup'")
+    )
+    if not result.fetchone():
+        muscle_group_enum = postgresql.ENUM(
+            "Chest",
+            "Back",
+            "Legs",
+            "Shoulders",
+            "Arms",
+            "Core",
+            "Full Body",
+            "Cardio",
+            name="musclegroup",
+            create_type=True,
+        )
+        muscle_group_enum.create(conn, checkfirst=True)
+
+    # Reference the enum for column creation
     muscle_group_enum = postgresql.ENUM(
         "Chest",
         "Back",
@@ -32,9 +52,8 @@ def upgrade() -> None:
         "Full Body",
         "Cardio",
         name="musclegroup",
-        create_type=True,
+        create_type=False,  # Don't create, just reference
     )
-    muscle_group_enum.create(op.get_bind(), checkfirst=True)
 
     # Create users table
     op.create_table(
