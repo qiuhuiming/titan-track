@@ -11,7 +11,7 @@ from app.schemas import WorkoutPlanCreate, WorkoutPlanResponse, WorkoutPlanUpdat
 router = APIRouter(prefix="/plans", tags=["workout_plans"])
 
 
-@router.get("/", response_model=list[WorkoutPlanResponse])
+@router.get("", response_model=list[WorkoutPlanResponse])
 async def list_plans(
     include_deleted: bool = False,
     db: AsyncSession = Depends(get_db),
@@ -48,7 +48,7 @@ async def get_plan(
     return plan
 
 
-@router.post("/", response_model=WorkoutPlanResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WorkoutPlanResponse, status_code=status.HTTP_201_CREATED)
 async def create_plan(
     plan_in: WorkoutPlanCreate,
     db: AsyncSession = Depends(get_db),

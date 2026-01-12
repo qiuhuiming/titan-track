@@ -23,6 +23,7 @@ app = FastAPI(
     description="Backend API for TitanTrack fitness tracking app",
     version="0.1.0",
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 # CORS middleware

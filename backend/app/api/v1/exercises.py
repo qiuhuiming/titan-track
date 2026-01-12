@@ -11,7 +11,7 @@ from app.schemas import ExerciseCreate, ExerciseResponse, ExerciseUpdate
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
 
-@router.get("/", response_model=list[ExerciseResponse])
+@router.get("", response_model=list[ExerciseResponse])
 async def list_exercises(
     include_deleted: bool = False,
     db: AsyncSession = Depends(get_db),
@@ -48,7 +48,7 @@ async def get_exercise(
     return exercise
 
 
-@router.post("/", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
 async def create_exercise(
     exercise_in: ExerciseCreate,
     db: AsyncSession = Depends(get_db),
